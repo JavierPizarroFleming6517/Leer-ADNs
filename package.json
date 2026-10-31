@@ -1,0 +1,11 @@
+{
+  "name": "identificacion-genetica",
+  "private": true,
+  "scripts": {
+    "install:all": "npm install --prefix server && npm install --prefix client/admin && npm install --prefix client/reader",
+    "dev": "concurrently -n server,admin,reader -c blue,green,magenta \"npm run start:dev --prefix server\" \"npm run dev --prefix client/admin\" \"npm run dev --prefix client/reader\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

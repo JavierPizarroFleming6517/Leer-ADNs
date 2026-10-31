@@ -1,0 +1,38 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Persona {
+  id              String          @id @default(uuid()) @db.Uuid
+  nombreCompleto  String
+  identificador   String          @unique
+  fechaNacimiento DateTime?       @db.Date
+  alertasClinicas Json?
+  qrTokenHash     String?         @unique
+  createdAt       DateTime        @default(now())
+  perfilGenetico  PerfilGenetico?
+  huellaDactilar  HuellaDactilar?
+}
+
+model PerfilGenetico {
+  id            String   @id @default(uuid()) @db.Uuid
+  personaId     String   @unique @db.Uuid
+  codigoMuestra String?
+  marcadoresSTR Json
+  createdAt     DateTime @default(now())
+  persona       Persona  @relation(fields: [personaId], references: [id], onDelete: Cascade)
+}
+
+model HuellaDactilar {
+  id                 String   @id @default(uuid()) @db.Uuid
+  personaId          String   @unique @db.Uuid
+  referenciaSimulada String?
+  estado             String
+  createdAt          DateTime @default(now())
+  persona            Persona  @relation(fields: [personaId], references: [id], onDelete: Cascade)
+}
