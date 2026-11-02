@@ -2,6 +2,45 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  @apply bg-slate-100 text-slate-900 antialiased;
+@layer base {
+  body {
+    @apply bg-surface font-sans text-ink antialiased;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl border border-line bg-white shadow-card;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-celeste-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply btn bg-celeste-600 text-white hover:bg-celeste-700;
+  }
+  .btn-secondary {
+    @apply btn border border-line bg-white text-ink hover:border-celeste-200 hover:bg-celeste-50;
+  }
+  .btn-ghost {
+    @apply btn text-ink-soft hover:bg-celeste-50 hover:text-ink;
+  }
+  .input {
+    @apply w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-sm text-ink outline-none transition placeholder:text-ink-mute focus:border-celeste-400 focus:ring-4 focus:ring-celeste-100;
+  }
+  .label {
+    @apply mb-1.5 block text-xs font-semibold uppercase tracking-wide text-ink-soft;
+  }
+  .eyebrow {
+    @apply text-[11px] font-semibold uppercase tracking-[0.14em] text-celeste-600;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold;
+  }
+}
+
+@keyframes escaneo {
+  0% { top: 0%; }
+  50% { top: 100%; }
+  100% { top: 0%; }
 }

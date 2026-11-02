@@ -45,7 +45,8 @@ function errorMessage(body: unknown): string {
 
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers = new Headers(options.headers);
-  if (options.body !== undefined && !headers.has('Content-Type')) {
+  // Con FormData el navegador pone el Content-Type multipart con su separador.
+  if (options.body !== undefined && !(options.body instanceof FormData) && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
 

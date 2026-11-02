@@ -12,8 +12,9 @@ model Persona {
   nombreCompleto  String
   identificador   String          @unique
   fechaNacimiento DateTime?       @db.Date
-  alertasClinicas Json?
+  nacionalidad    String?
   qrTokenHash     String?         @unique
+  qrGeneradoEn    DateTime?
   createdAt       DateTime        @default(now())
   perfilGenetico  PerfilGenetico?
   huellaDactilar  HuellaDactilar?
@@ -24,6 +25,9 @@ model PerfilGenetico {
   personaId     String   @unique @db.Uuid
   codigoMuestra String?
   marcadoresSTR Json
+  formatoOrigen String?
+  archivoOrigen String?
+  hashArchivo   String?
   createdAt     DateTime @default(now())
   persona       Persona  @relation(fields: [personaId], references: [id], onDelete: Cascade)
 }

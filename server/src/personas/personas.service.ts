@@ -1,58 +1,62 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { createHash, randomBytes } from 'crypto';
+import { ErrorPerfil, Marcadores, alelosUnicos, nombreLocus, ordenarMarcadores, resumir } from '../genetica/str';
+import { NOMBRE_FORMATO, Formato } from '../genetica/lectores';
+import { MuestrasService } from '../muestras/muestras.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ImportarPersonaDto } from './dto/importar-persona.dto';
 
-const MARKER_NAME = /^[A-Za-z0-9][A-Za-z0-9 ._-]{0,30}$/;
-const ALLELE = /^[A-Za-z0-9.]{1,10}$/;
-
 @Injectable()
 export class PersonasService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly muestras: MuestrasService,
+  ) {}
 
   async importar(dto: ImportarPersonaDto) {
     const marcadoresSTR = this.normalizarMarcadores(dto.perfilGenetico.marcadoresSTR);
-    const alertasClinicas = this.normalizarAlertas(dto.alertasClinicas);
     const fechaNacimiento = this.parseFecha(dto.fechaNacimiento);
-    const codigoMuestra = dto.perfilGenetico.codigoMuestra?.trim() || null;
+
+    // Un mismo perfil no puede quedar a nombre de dos personas.
+    const coincidencias = this.muestras.buscar(marcadoresSTR, await this.muestras.perfilesRegistrados());
+    if (coincidencias.length) {
+      const c = coincidencias[0];
+      throw new ConflictException(
+        `Este perfil genético ya está registrado a nombre de ${c.nombreCompleto} (${c.identificador}).`,
+      );
+    }
 
     try {
-      const persona = await this.prisma.$transaction((tx) =>
-        tx.persona.create({
-          data: {
-            nombreCompleto: dto.nombreCompleto,
-            identificador: dto.identificador,
-            fechaNacimiento,
-            alertasClinicas: alertasClinicas ?? undefined,
-            perfilGenetico: {
-              create: {
-                codigoMuestra,
-                marcadoresSTR,
-              },
+      const persona = await this.prisma.persona.create({
+        data: {
+          nombreCompleto: dto.nombreCompleto,
+          identificador: dto.identificador,
+          fechaNacimiento,
+          nacionalidad: dto.nacionalidad || null,
+          perfilGenetico: {
+            create: {
+              codigoMuestra: dto.perfilGenetico.codigoMuestra,
+              marcadoresSTR,
+              formatoOrigen: dto.perfilGenetico.formatoOrigen ?? null,
+              archivoOrigen: dto.perfilGenetico.archivoOrigen ?? null,
+              hashArchivo: dto.perfilGenetico.hashArchivo ?? null,
             },
-            ...(dto.huellaDactilar
-              ? {
-                  huellaDactilar: {
-                    create: {
-                      referenciaSimulada: dto.huellaDactilar.referenciaSimulada?.trim() || null,
-                      estado: dto.huellaDactilar.estado,
-                    },
-                  },
-                }
-              : {}),
           },
-        }),
-      );
+          // La huella dactilar es simulada en la demo: se crea una referencia ficticia.
+          huellaDactilar: {
+            create: {
+              referenciaSimulada: `SIM-${randomBytes(3).toString('hex').toUpperCase()}`,
+              estado: 'simulada',
+            },
+          },
+        },
+      });
 
-      return {
-        id: persona.id,
-        nombreCompleto: persona.nombreCompleto,
-        identificador: persona.identificador,
-      };
+      return { id: persona.id, nombreCompleto: persona.nombreCompleto, identificador: persona.identificador };
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-        throw new ConflictException('Ya existe una persona con ese identificador.');
+        throw new ConflictException('Ya existe una persona con ese documento.');
       }
       throw error;
     }
@@ -66,21 +70,27 @@ export class PersonasService {
         nombreCompleto: true,
         identificador: true,
         qrTokenHash: true,
+        qrGeneradoEn: true,
+        createdAt: true,
+        perfilGenetico: { select: { codigoMuestra: true, marcadoresSTR: true, formatoOrigen: true } },
       },
     });
 
-    return personas.map(({ qrTokenHash, ...persona }) => ({
-      ...persona,
-      tieneQr: qrTokenHash !== null,
-    }));
+    return personas.map(({ qrTokenHash, perfilGenetico, ...persona }) => {
+      const resumen = perfilGenetico ? resumir(perfilGenetico.marcadoresSTR as Marcadores) : null;
+      return {
+        ...persona,
+        tieneQr: qrTokenHash !== null,
+        codigoMuestra: perfilGenetico?.codigoMuestra ?? null,
+        formatoOrigen: perfilGenetico?.formatoOrigen ?? null,
+        codisPresentes: resumen?.codisPresentes ?? 0,
+        totalLoci: resumen?.totalLoci ?? 0,
+      };
+    });
   }
 
   async generarQr(id: string) {
-    const persona = await this.prisma.persona.findUnique({
-      where: { id },
-      select: { id: true },
-    });
-
+    const persona = await this.prisma.persona.findUnique({ where: { id }, select: { id: true } });
     if (!persona) {
       throw new NotFoundException('No existe la persona solicitada.');
     }
@@ -92,10 +102,7 @@ export class PersonasService {
       const qrTokenHash = this.hashToken(token);
 
       try {
-        await this.prisma.persona.update({
-          where: { id },
-          data: { qrTokenHash },
-        });
+        await this.prisma.persona.update({ where: { id }, data: { qrTokenHash, qrGeneradoEn: new Date() } });
         return { url: `${base}/q/${token}` };
       } catch (error) {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
@@ -115,30 +122,33 @@ export class PersonasService {
   async resolver(token: string) {
     const persona = await this.prisma.persona.findUnique({
       where: { qrTokenHash: this.hashToken(token.trim()) },
-      include: {
-        perfilGenetico: true,
-        huellaDactilar: true,
-      },
+      include: { perfilGenetico: true, huellaDactilar: true },
     });
 
     if (!persona?.perfilGenetico) {
       throw new NotFoundException('El código QR no es válido o el expediente no existe.');
     }
 
+    const marcadores = persona.perfilGenetico.marcadoresSTR as Marcadores;
+    const formato = persona.perfilGenetico.formatoOrigen as Formato | null;
+
     return {
       nombreCompleto: persona.nombreCompleto,
       identificador: persona.identificador,
       fechaNacimiento: persona.fechaNacimiento ? persona.fechaNacimiento.toISOString().slice(0, 10) : null,
-      alertasClinicas: persona.alertasClinicas,
+      nacionalidad: persona.nacionalidad,
+      registradoEn: persona.createdAt.toISOString(),
+      qrGeneradoEn: persona.qrGeneradoEn?.toISOString() ?? null,
       perfilGenetico: {
         codigoMuestra: persona.perfilGenetico.codigoMuestra,
-        marcadoresSTR: persona.perfilGenetico.marcadoresSTR,
+        marcadoresSTR: marcadores,
+        resumen: resumir(marcadores),
+        formatoOrigen: formato ? NOMBRE_FORMATO[formato] : null,
+        archivoOrigen: persona.perfilGenetico.archivoOrigen,
+        hashArchivo: persona.perfilGenetico.hashArchivo,
       },
       huellaDactilar: persona.huellaDactilar
-        ? {
-            referenciaSimulada: persona.huellaDactilar.referenciaSimulada,
-            estado: persona.huellaDactilar.estado,
-          }
+        ? { referenciaSimulada: persona.huellaDactilar.referenciaSimulada, estado: persona.huellaDactilar.estado }
         : null,
     };
   }
@@ -147,76 +157,33 @@ export class PersonasService {
     return createHash('sha256').update(token, 'utf8').digest('hex');
   }
 
-  private normalizarMarcadores(value: Record<string, unknown>): Prisma.InputJsonObject {
+  private normalizarMarcadores(value: Record<string, unknown>): Marcadores {
     const entries = Object.entries(value);
-    if (entries.length === 0) {
-      throw new BadRequestException('Debe incluir al menos un marcador STR.');
-    }
-    if (entries.length > 40) {
-      throw new BadRequestException('Se pueden registrar hasta 40 marcadores STR.');
-    }
+    if (entries.length === 0) throw new BadRequestException('Debe incluir al menos un marcador STR.');
+    if (entries.length > 40) throw new BadRequestException('Se pueden registrar hasta 40 marcadores STR.');
 
-    const marcadores: Record<string, string[]> = {};
-
-    for (const [marker, alleles] of entries) {
-      if (marker === '__proto__' || marker === 'constructor' || marker === 'prototype' || !MARKER_NAME.test(marker)) {
-        throw new BadRequestException(`Marcador inválido: ${marker}`);
-      }
-      if (!Array.isArray(alleles) || alleles.length === 0 || alleles.length > 4) {
-        throw new BadRequestException(`El marcador ${marker} debe tener entre 1 y 4 alelos.`);
-      }
-
-      const normalizados = alleles.map((allele) => {
-        if (typeof allele !== 'string' || !ALLELE.test(allele.trim())) {
-          throw new BadRequestException(
-            `Los alelos de ${marker} deben ser texto, por ejemplo "15" o "9.3".`,
-          );
+    const marcadores: Marcadores = {};
+    try {
+      for (const [marker, alleles] of entries) {
+        const locus = nombreLocus(marker);
+        if (!Array.isArray(alleles) || alleles.length === 0 || alleles.length > 4) {
+          throw new ErrorPerfil(`El marcador ${locus} debe tener entre 1 y 4 alelos.`);
         }
-        return allele.trim();
-      });
-
-      marcadores[marker] = normalizados;
+        marcadores[locus] = alelosUnicos(alleles, locus);
+      }
+    } catch (error) {
+      if (error instanceof ErrorPerfil) throw new BadRequestException(error.message);
+      throw error;
     }
-
-    return marcadores as Prisma.InputJsonObject;
-  }
-
-  private normalizarAlertas(alertas?: ImportarPersonaDto['alertasClinicas']): Prisma.InputJsonObject | undefined {
-    if (!alertas) {
-      return undefined;
-    }
-
-    const alergias = (alertas.alergias ?? []).map((item) => item.trim()).filter(Boolean);
-    const observaciones = alertas.observaciones?.trim() ?? '';
-
-    if (alergias.some((item) => item.length > 80)) {
-      throw new BadRequestException('Cada alergia puede tener hasta 80 caracteres.');
-    }
-
-    if (alergias.length === 0 && !observaciones) {
-      return undefined;
-    }
-
-    return {
-      ...(alergias.length ? { alergias } : {}),
-      ...(observaciones ? { observaciones } : {}),
-    };
+    return ordenarMarcadores(marcadores);
   }
 
   private parseFecha(value?: string | null): Date | null {
-    if (!value) {
-      return null;
-    }
-
+    if (!value) return null;
     const [year, month, day] = value.split('-').map(Number);
     const date = new Date(Date.UTC(year, month - 1, day));
-    const valid =
-      date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
-
-    if (!valid) {
-      throw new BadRequestException('La fecha de nacimiento no es válida.');
-    }
-
+    const valid = date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+    if (!valid) throw new BadRequestException('La fecha de nacimiento no es válida.');
     return date;
   }
 }
