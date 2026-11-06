@@ -11,7 +11,8 @@
     "seed": "ts-node --transpile-only prisma/seed.ts",
     "demo:alterar": "ts-node --transpile-only scripts/alterar.ts",
     "test": "jest --runInBand",
-    "demo:resultado": "ts-node --transpile-only scripts/resultado.ts"
+    "demo:resultado": "ts-node --transpile-only scripts/resultado.ts",
+    "demo:ejemplos": "ts-node --transpile-only scripts/ejemplos.ts"
   },
   "prisma": {
     "seed": "ts-node --transpile-only prisma/seed.ts"

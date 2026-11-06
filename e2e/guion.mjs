@@ -2,7 +2,7 @@
 // Requiere la app corriendo (npm run dev). Restablece la demo al empezar (usa --sin-reset para omitirlo).
 // Deja una captura de cada pantalla en docs/capturas/.
 import { execSync } from 'node:child_process';
-import { mkdirSync, readFileSync } from 'node:fs';
+import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { chromium, devices } from 'playwright';
 import { RAIZ, leerEnv } from '../scripts/comun.mjs';
@@ -10,6 +10,10 @@ import { RAIZ, leerEnv } from '../scripts/comun.mjs';
 const BASE = process.env.BASE_URL ?? 'http://localhost:5173';
 const SALIDA = join(RAIZ, 'docs', 'capturas');
 const DEMO = join(RAIZ, 'examples', 'demo');
+// Códigos fijos de la demo (server/prisma/siembra/codigos.ts).
+const EN_VIVO = 'TG-7M4K-2QRT';
+const DUPLICADO = 'TG-0ZKT-7HEB';
+const PERFIL_REGISTRADO = 'TG-5C8R-7NHQ';
 const PASSWORD = leerEnv().DEMO_PASSWORD;
 mkdirSync(SALIDA, { recursive: true });
 
@@ -45,7 +49,6 @@ if (!process.argv.includes('--sin-reset')) {
   paso('Restableciendo la demo');
   execSync('node scripts/reset.mjs', { cwd: RAIZ, stdio: 'ignore' });
 }
-const asignacion = JSON.parse(readFileSync(join(RAIZ, 'datasets', 'asignacion.json'), 'utf8'));
 
 const navegador = await chromium.launch();
 const escritorio = { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2, locale: 'es-CL' };
@@ -87,11 +90,11 @@ try {
   await admin.waitForURL(/\/lotes\/.+\/etiquetas/);
   await admin.getByTestId('etiqueta').nth(4).locator('img').waitFor();
   await captura(admin, 'etiquetas_qr_imprimibles');
-  const urlQr = await admin.getByTestId('etiqueta').first().getAttribute('data-url');
   const urlQrSinUso = await admin.getByTestId('etiqueta').nth(4).getAttribute('data-url');
-  const codigoNuevo = urlQr.match(/TG-[0-9A-Z]{4}-[0-9A-Z]{4}/)[0];
   const codigoSinUso = urlQrSinUso.match(/TG-[0-9A-Z]{4}-[0-9A-Z]{4}/)[0];
-  console.log(`  Sticker nuevo: ${codigoNuevo}`);
+  const tok = await (await fetch(`${BASE}/api/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'admin@trazagen.cl', password: PASSWORD }) })).json();
+  const qrDe = async (codigo) => (await (await fetch(`${BASE}/api/stickers/${codigo}`, { headers: { Authorization: `Bearer ${tok.accessToken}` } })).json()).qrUrl;
+  const urlQr = await qrDe(EN_VIVO);
 
   // ---------------------------------------------------------------- 3
   paso('3. Verificar QR → asociar persona → consentimiento → toma → huellas → duplicado → envío al laboratorio');
@@ -116,7 +119,7 @@ try {
   await captura(admin, 'asociar_persona');
   await admin.getByTestId('guardar-persona').click();
   await admin.getByText('Datos sensibles cifrados').waitFor();
-  await admin.getByTestId('subir-consentimiento').setInputFiles(join(DEMO, 'consentimiento_firmado.pdf'));
+  await admin.getByTestId('subir-consentimiento').setInputFiles(join(DEMO, 'paso3_toma', 'consentimiento_firmado.pdf'));
   await admin.getByText('Consentimiento guardado').waitFor();
   await captura(admin, 'persona_y_consentimiento');
   await tab(admin, 'toma');
@@ -124,11 +127,11 @@ try {
   await admin.getByText('Registrada').waitFor();
   await captura(admin, 'toma_registrada');
   await tab(admin, 'huellas');
-  await admin.getByTestId('input-dedo-2').setInputFiles(join(DEMO, 'toma', 'dedo_nuevo_indice_derecho.png'));
+  await admin.getByTestId('input-dedo-2').setInputFiles(join(DEMO, 'paso3_toma', 'huella_indice_derecho.png'));
   await admin.getByText('sin duplicados').waitFor({ timeout: 30000 });
   await admin.getByTestId('detalle-huella').locator('img').waitFor();
   await captura(admin, 'huella_cargada_minucias');
-  await admin.getByTestId('input-dedo-3').setInputFiles(join(DEMO, 'toma', 'dedo_repetido.png'));
+  await admin.getByTestId('input-dedo-3').setInputFiles(join(DEMO, 'paso3_toma', 'huella_medio_derecho_repetida.png'));
   await admin.getByText('coincide con una huella de otro sticker').waitFor({ timeout: 30000 });
   await captura(admin, 'alerta_huella_duplicada');
   await tab(admin, 'perfil');
@@ -140,16 +143,12 @@ try {
   await captura(admin, 'esperando_resultado_laboratorio');
 
   // ---------------------------------------------------------------- 4
-  paso('4. Resultado del laboratorio externo: archivo de otra muestra (rechazado) → archivo correcto (aceptado)');
-  const codigoLab = asignacion.stickers.enLaboratorioGuion.codigo;
-  await admin.goto(`${BASE}/`);
-  await admin.getByTestId('esperando-laboratorio').filter({ hasText: codigoLab }).click();
-  await admin.getByTestId('subir-perfil').waitFor({ state: 'attached' });
-  await admin.getByTestId('subir-perfil').setInputFiles(join(DEMO, 'perfil_otra_muestra.xml'));
+  paso('4. Resultado del laboratorio externo: archivo de otra muestra (rechazado) → archivo del sticker (aceptado)');
+  await admin.getByTestId('subir-perfil').setInputFiles(join(DEMO, 'paso4_laboratorio', '1_resultado_de_otra_muestra.xml'));
   await admin.getByTestId('perfil-rechazado').waitFor();
   await admin.getByText('El archivo corresponde a otra muestra').waitFor();
   await captura(admin, 'perfil_rechazado_otra_muestra');
-  await admin.getByTestId('subir-perfil').setInputFiles(join(DEMO, 'perfil_sticker_en_lab.xml'));
+  await admin.getByTestId('subir-perfil').setInputFiles(join(DEMO, 'paso4_laboratorio', `2_resultado_${EN_VIVO}.xml`));
   await admin.getByTestId('perfil-aceptado').waitFor();
   await admin.getByText('Sin coincidencias en el registro').waitFor();
   await admin.getByText('20/20 CODIS').first().waitFor();
@@ -170,16 +169,15 @@ try {
   // ---------------------------------------------------------------- 6
   paso('6. Verificación por huella (coincide y sin coincidencias) y por perfil');
   await admin.goto(`${BASE}/verificacion`);
-  await admin.getByTestId('subir-huella-verificar').setInputFiles(join(DEMO, 'huella_para_verificar.png'));
+  await admin.getByTestId('subir-huella-verificar').setInputFiles(join(DEMO, 'paso6_verificacion', '1_huella_registrada.png'));
   await admin.getByTestId('resultado-coincide').waitFor({ timeout: 30000 });
-  const esperado = asignacion.archivosDemo['huella_para_verificar.png'].dueño.persona;
-  await admin.getByText(`Coincide con ${esperado}`).waitFor();
+  await admin.getByText('Coincide con Valeria Andrea Contreras Ibáñez').waitFor();
   await captura(admin, 'verificacion_huella_coincide', true);
-  await admin.getByTestId('subir-huella-verificar').setInputFiles(join(DEMO, 'huella_desconocida.png'));
+  await admin.getByTestId('subir-huella-verificar').setInputFiles(join(DEMO, 'paso6_verificacion', '2_huella_desconocida.png'));
   await admin.getByTestId('resultado-sin-coincidencias').waitFor({ timeout: 30000 });
   await captura(admin, 'verificacion_huella_sin_coincidencias', true);
   await admin.getByTestId('modo-perfil').click();
-  await admin.getByTestId('subir-perfil-verificar').setInputFiles(join(DEMO, 'perfil_persona_registrada.xml'));
+  await admin.getByTestId('subir-perfil-verificar').setInputFiles(join(DEMO, 'paso6_verificacion', '3_perfil_registrado.xml'));
   await admin.getByTestId('perfil-coincide').waitFor();
   await captura(admin, 'verificacion_perfil_coincide');
 
@@ -199,10 +197,8 @@ try {
 
   // ---------------------------------------------------------------- 8
   paso('8. Escanear desde el celular el QR de una persona registrada → expediente; QR falso');
-  const codigoRegistrado = asignacion.archivosDemo['perfil_persona_registrada.xml'].sticker;
-  const tok = await (await fetch(`${BASE}/api/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'admin@trazagen.cl', password: PASSWORD }) })).json();
-  const ficha = await (await fetch(`${BASE}/api/stickers/${codigoRegistrado}`, { headers: { Authorization: `Bearer ${tok.accessToken}` } })).json();
-  const ruta = new URL(ficha.qrUrl).pathname;
+  const codigoRegistrado = PERFIL_REGISTRADO;
+  const ruta = new URL(await qrDe(codigoRegistrado)).pathname;
   const movil = await sesion('admin@trazagen.cl', { ...devices['iPhone 13'], locale: 'es-CL' });
   await movil.goto(`${BASE}${ruta}`);
   await movil.getByText('QR auténtico: firma Ed25519 verificada').waitFor();
@@ -218,7 +214,7 @@ try {
   await captura(admin, 'eliminar_sticker_sin_uso');
   await admin.getByTestId('confirmar-accion').click();
   await admin.waitForURL(/\/stickers$/);
-  const codigoDuplicado = asignacion.stickers.duplicado.codigo;
+  const codigoDuplicado = DUPLICADO;
   await admin.goto(`${BASE}/stickers/${codigoDuplicado}`);
   await admin.getByTestId('anular-sticker').click();
   await admin.getByTestId('motivo-anulacion').fill('Huella de otra persona cargada por error; se repite la toma');

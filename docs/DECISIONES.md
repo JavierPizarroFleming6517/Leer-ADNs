@@ -11,7 +11,7 @@ Se mantuvo la simplificación de `simplificar` (un solo usuario de administraci�
 - **Eliminar vs. anular.** Solo se eliminan lotes y stickers sin uso. Un sticker con datos se **anula**: evento `ANULACION` con motivo, vínculo vigente revocado, solo lectura, y fuera de las búsquedas 1:N, la comparación de perfiles y las alertas.
 - **Detalles recuperados.** Indicador de servicios (API, base de datos, motor biométrico) con el aviso «Motor biométrico no disponible», barra del ciclo de vida en la ficha y estados en la lista de stickers.
 - **Roles.** Los permisos por rol siguen revisándose en el servidor, pero la demo usa solo el usuario de administración, como decidió `simplificar`. Los demás usuarios quedan sembrados e inactivos (aparecen como responsables de eventos históricos).
-- **Archivos de ejemplo.** Como el `SPECIMENID` es el código del sticker (aleatorio), `examples/demo/perfil_sticker_en_lab.xml` lo reescribe cada siembra, igual que `datasets/asignacion.json`.
+- **Códigos fijos y archivos fijos.** Como el `SPECIMENID` del resultado es el código del sticker, los stickers de la demo tienen **códigos fijos** (`server/prisma/siembra/codigos.ts`): `TG-7M4K-2QRT` para la toma en vivo, uno por cada persona sembrada, el que espera su resultado y el del duplicado. Así los archivos de `examples/demo/` (ordenados por paso) son fijos, sirven en cualquier máquina y la siembra no reescribe nada del repositorio (`datasets/asignacion.json` sale idéntico en cada siembra). El resto de los stickers sigue con códigos aleatorios. Los archivos se regeneran con `npm run demo:ejemplos --prefix server` si cambia la demo; `npm run demo:resultado -- TG-XXXX-XXXX` genera el resultado para cualquier otro sticker.
 
 ## Versión original (`trazagen-demo`)
 
@@ -44,10 +44,10 @@ Registro de lo que se decidió durante la construcción de la demo de TrazaGen y
 FVC2002 sets B trae 40 dedos (DB1_B a DB4_B, dedos 101–110, 8 impresiones cada uno). El documento pedía 8 personas × 5 dedos usando 39 dedos y dejando uno de DB4 sin asignar. Pero la demo también necesita huellas **no registradas** para el sticker en laboratorio del guion (que debe poder firmar su vínculo sin ser un duplicado) y para la toma en vivo del paso 3 (que no debe disparar una alerta falsa). Con 40 dedos no alcanza para todo, y no hay otra base disponible (el sitio de FVC no era accesible desde el entorno y el documento pide no inventar huellas). Se decidió:
 
 - **36 dedos** para las 8 personas completas: 4 personas con 5 huellas y 4 con 4 huellas y una casilla «no obtenible» con su motivo (cicatriz, amputación, vendaje, dermatitis). La octava persona tiene la quinta casilla no obtenible, como pedía el documento.
-- **DB4_B/103** sin asignar: `huella_desconocida.png` (impresión `_2`).
+- **DB4_B/103** sin asignar: `paso6_verificacion/2_huella_desconocida.png` (impresión `_2`).
 - **DB1_B/105 y DB1_B/109** para el sticker en laboratorio del guion (las otras tres casillas, no obtenibles por grafito insuficiente).
-- **DB1_B/107** reservado para la toma en vivo (`toma/dedo_nuevo_indice_derecho.png`).
-- El **duplicado sembrado** es la impresión `_2` de DB2_B/101 cargada a otra persona; `toma/dedo_repetido.png` es la impresión `_3` de DB1_B/108. `huella_para_verificar.png` es la impresión `_5` de DB1_B/106.
+- **DB1_B/107** reservado para la toma en vivo (`paso3_toma/huella_indice_derecho.png`).
+- El **duplicado sembrado** es la impresión `_2` de DB2_B/101 cargada a otra persona; `paso3_toma/huella_medio_derecho_repetida.png` es la impresión `_3` de DB1_B/108. `paso6_verificacion/1_huella_registrada.png` es la impresión `_5` de DB1_B/106.
 
 `datasets/asignacion.json` (lo escribe la siembra) detalla cada asignación. Las imágenes de `examples/demo` se convierten a PNG con el propio `afis`; los códigos de sticker son aleatorios en cada siembra, pero el reparto de dedos y los códigos de muestra (M-000001…M-000010) son siempre los mismos.
 

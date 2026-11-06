@@ -88,20 +88,22 @@ Los permisos se revisan en el servidor en cada solicitud (JWT con expiración y 
 - 1 sticker **enviado al laboratorio y esperando el resultado**, para el guion (aparece en el Inicio, en «En el laboratorio externo»).
 - 1 caso de huella duplicada: otra persona a la que se le cargó la impresión `_2` de un dedo que ya pertenece a alguien. **SourceAFIS lo detecta al sembrar** (puntaje ≈ 370). También quedó enviado al laboratorio.
 - Verificaciones del mes e intentos de QR falso en la auditoría.
-- `datasets/asignacion.json`: qué archivo de FVC2002 quedó en qué persona y posición.
+- `datasets/asignacion.json`: qué archivo de FVC2002 quedó en qué persona, sticker y posición (igual en cada siembra).
 
 ## Archivos para el video (`examples/demo/`)
 
 | Archivo | Para qué |
 | --- | --- |
-| `consentimiento_firmado.pdf` | Consentimiento a subir en el paso 3. |
-| `toma/dedo_nuevo_indice_derecho.png` | Huella limpia (no registrada) para cargar en vivo. |
-| `toma/dedo_repetido.png` | Otra impresión de un dedo ya registrado: dispara la alerta de duplicado. |
-| `perfil_otra_muestra.xml` | CMF con un `SPECIMENID` que no es el código del sticker: se rechaza. |
-| `perfil_sticker_en_lab.xml` | Resultado del laboratorio para el sticker que espera su perfil (su `SPECIMENID` es el código de ese sticker; lo reescribe cada siembra): se acepta, 20/20 CODIS, sin coincidencias. |
-| `huella_para_verificar.png` | Impresión `_5` de un dedo registrado: encuentra a su dueña con puntaje real. |
-| `huella_desconocida.png` | Dedo de DB4 que no se asignó a nadie: «Sin coincidencias». |
-| `perfil_persona_registrada.xml` | Perfil de una persona registrada: coincidencia por ADN. |
+| `paso3_toma/consentimiento_firmado.pdf` | Consentimiento a subir en la toma. |
+| `paso3_toma/huella_indice_derecho.png` | Huella limpia (no registrada) para la casilla 2. |
+| `paso3_toma/huella_medio_derecho_repetida.png` | Otra impresión de un dedo ya registrado (casilla 3): dispara la alerta de duplicado. |
+| `paso4_laboratorio/1_resultado_de_otra_muestra.xml` | Resultado con un `SPECIMENID` que no es el del sticker: se rechaza. |
+| `paso4_laboratorio/2_resultado_TG-7M4K-2QRT.xml` | Resultado del laboratorio para el sticker en vivo `TG-7M4K-2QRT`: se acepta, 20/20 CODIS. |
+| `paso6_verificacion/1_huella_registrada.png` | Impresión `_5` de un dedo registrado: encuentra a su dueña con puntaje real. |
+| `paso6_verificacion/2_huella_desconocida.png` | Dedo de DB4 que no se asignó a nadie: «Sin coincidencias». |
+| `paso6_verificacion/3_perfil_registrado.xml` | Perfil de una persona registrada: coincidencia por ADN. |
+
+Son archivos fijos: la siembra no los modifica. Los stickers de la demo tienen **códigos fijos** (por ejemplo `TG-7M4K-2QRT` para la toma en vivo); los demás son aleatorios, como en producción. Si cambia algo de la demo, se regeneran con `npm run demo:ejemplos --prefix server`.
 
 ## Guion del video
 
@@ -109,10 +111,10 @@ Antes de grabar: `npm run demo:reset` y `npm run dev`. Las capturas de cada paso
 
 1. **Login → Inicio.** Datos realistas, la alerta «Posible huella duplicada», los intentos de QR falso, los stickers por estado y los que esperan el resultado del laboratorio externo.
 2. **Stickers y lotes → Crear lote** de 5 stickers (plantilla internacional). Se abre la grilla de etiquetas QR: **Imprimir / Guardar PDF**. También se puede bajar el CSV para la fábrica.
-3. **Verificación → Por QR.** Escanea con la cámara una etiqueta impresa (o pega el código / la URL, o sube una foto del QR). Aparece «QR auténtico» → **Ver expediente** → **Iniciar toma** → completa la persona → sube `consentimiento_firmado.pdf` → pestaña **Toma** → «Registrar toma» → pestaña **Huellas**: arrastra `toma/dedo_nuevo_indice_derecho.png` al índice derecho (minucias reales dibujadas, sin duplicados) y `toma/dedo_repetido.png` al medio derecho → **alerta de duplicado** con la persona, el dedo y el puntaje → pestaña **Laboratorio y perfil** → **Registrar envío** al laboratorio externo (queda «Esperando resultado»).
-4. **Resultado del laboratorio.** En el mismo sticker sube `perfil_otra_muestra.xml` (**rechazado**: «El archivo corresponde a otra muestra»). Luego genera su resultado con `npm run demo:resultado -- TG-XXXX-XXXX` y sube el archivo creado (**aceptado**, 20/20 CODIS, sin coincidencias). El sticker pasa a «En uso». Sin terminal: abre en el Inicio el sticker sembrado que lleva más días esperando y sube `perfil_sticker_en_lab.xml`.
+3. **Verificación → Por QR** → `TG-7M4K-2QRT` (o escanea su etiqueta en el lote `L-2026-003`) → **Ver expediente** → **Iniciar toma** → persona nueva → `paso3_toma/consentimiento_firmado.pdf` → **Toma** → **Huellas**: `paso3_toma/huella_indice_derecho.png` en la casilla 2 (minucias reales, sin duplicados) y `paso3_toma/huella_medio_derecho_repetida.png` en la casilla 3 (**alerta de duplicado**) → **Laboratorio y perfil** → **Registrar envío**.
+4. **Resultado del laboratorio** en el mismo sticker: `paso4_laboratorio/1_resultado_de_otra_muestra.xml` (**rechazado**: «El archivo corresponde a otra muestra») y luego `paso4_laboratorio/2_resultado_TG-7M4K-2QRT.xml` (**aceptado**, 20/20 CODIS, sin coincidencias). El sticker pasa a «En uso».
 5. Pestaña **Vínculo** → **Firmar vínculo** → **Verificar integridad ✓**. Pestaña **Custodia** → **Verificar cadena ✓**.
-6. **Verificación** → sube `huella_para_verificar.png` → «Coincide con Valeria Andrea Contreras Ibáñez, meñique derecho, sticker TG-…, puntaje ≈ 166» → sube `huella_desconocida.png` → «Sin coincidencias» → «Por perfil genético» → `perfil_persona_registrada.xml` → coincidencia.
+6. **Verificación** → sube `paso6_verificacion/1_huella_registrada.png` → «Coincide con Valeria Andrea Contreras Ibáñez, meñique derecho, sticker TG-…, puntaje ≈ 166» → sube `paso6_verificacion/2_huella_desconocida.png` → «Sin coincidencias» → «Por perfil genético» → `paso6_verificacion/3_perfil_registrado.xml` → coincidencia.
 7. En una terminal: `npm run demo:alterar` (modifica un alelo **directamente en PostgreSQL**, sin pasar por la API, e imprime la persona y el sticker). Vuelve a ese sticker → **Vínculo → Verificar integridad ✗**: indica que cambió el perfil y el locus exacto (p. ej. D8S1179: 12, 15 → 12, 16). El Inicio también muestra la alerta.
 8. **Desde el celular**: escanea con la cámara del teléfono el QR de una persona registrada (abre la ficha, ícono del QR) → inicia sesión → expediente adaptado al celular.
 9. (Opcional) **Eliminar y anular**: un sticker sin uso se elimina; uno con datos (por ejemplo el del duplicado) solo se **anula**, con motivo, y su cadena de custodia sigue íntegra.
@@ -127,7 +129,7 @@ Antes de grabar: `npm run demo:reset` y `npm run dev`. Las capturas de cada paso
 | `npm run dev` | Levanta afis, API y web. |
 | `npm run demo:reset` | Recrea el esquema de la base, migra y vuelve a sembrar (deja todo como nuevo, incluido lo alterado). |
 | `npm run demo:alterar` | Altera directamente en la base un alelo del perfil de una persona con vínculo firmado. |
-| `npm run demo:resultado -- TG-XXXX-XXXX` | Genera el archivo que entregaría el laboratorio externo para ese sticker (CMF con `SPECIMENID` = su código y un perfil GlobalFiler ficticio) en `examples/demo/resultados/`. |
+| `npm run demo:resultado -- TG-XXXX-XXXX` | (Opcional, para otros stickers) Genera el archivo que entregaría el laboratorio externo para ese sticker (CMF con `SPECIMENID` = su código y un perfil GlobalFiler ficticio) en `examples/demo/resultados/`. |
 | `npm test` | Pruebas automáticas del servidor (Jest), incluida la del trigger contra la base de `server/.env`. |
 | `npm run test:afis` | Evalúa SourceAFIS con FVC2002: genuinos vs. impostores. Escribe `docs/evaluacion-afis.json`. |
 | `npm run test:e2e` | Recorre el guion completo con Playwright y deja las capturas en `docs/capturas/`. Requiere `npm run dev` corriendo y Chromium de Playwright (`npx playwright install chromium`). **Restablece la demo.** |

@@ -163,22 +163,16 @@ Para detener todo:  Ctrl + C  en la terminal de "npm run dev".
                          cargar los datos de demostración).
   npm run demo:alterar   Altera un dato directo en la base para mostrar
                          que "Verificar integridad" lo detecta.
-  npm run demo:resultado -- TG-XXXX-XXXX
-                         Genera el archivo de resultado del laboratorio
-                         (perfil ficticio) para ese sticker, en
-                         examples/demo/resultados/. Súbelo en la pestaña
-                         "Laboratorio y perfil" del sticker.
   npm test               Pruebas automáticas.
 
-Para recorrer todo el flujo paso a paso, con los archivos de prueba de
-examples/demo/, sigue:   docs/GUIA_PRUEBA.md
+Para recorrer todo el flujo paso a paso sigue:   docs/GUIA_PRUEBA.md
 
-Después de un "demo:reset", git muestra modificado el archivo
-datasets/asignacion.json y examples/demo/perfil_sticker_en_lab.xml
-(la siembra los reescribe con los códigos de sticker nuevos). Es normal.
-Para descartarlos:
+Todos los archivos para subir están en examples/demo/, ordenados por
+paso (paso3_toma, paso4_laboratorio, paso6_verificacion), con un
+resumen en examples/demo/LEEME.txt. Son fijos: "demo:reset" no
+modifica ningún archivo del repositorio.
 
-  git checkout datasets/asignacion.json examples/demo/perfil_sticker_en_lab.xml
+El sticker para la toma completa en vivo es siempre TG-7M4K-2QRT.
 
 
 ---------------------------------------------------------------------

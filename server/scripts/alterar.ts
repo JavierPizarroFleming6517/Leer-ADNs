@@ -3,24 +3,22 @@
 // "npm run demo:reset" deja todo como estaba.
 import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
-import { existsSync, readFileSync } from 'fs';
-import { join } from 'path';
+import { CODIGOS_DEMO } from '../prisma/siembra/codigos';
 
 const LOCUS = 'D8S1179';
 
 async function main() {
   const prisma = new PrismaClient();
   try {
-    const archivo = join(__dirname, '..', '..', 'datasets', 'asignacion.json');
-    let codigo: string | undefined;
-    if (existsSync(archivo)) codigo = JSON.parse(readFileSync(archivo, 'utf8'))?.stickers?.alterable?.codigo;
+    // Matías Ignacio Herrera Lagos (código fijo de la demo); si no existe, la primera persona con vínculo.
+    const codigo: string = CODIGOS_DEMO.personas[1];
     const filas = await prisma.$queryRaw<{ codigo: string; perfil_id: string; marcadores: Record<string, string[]>; nombres: string; apellidos: string; muestra: string }[]>`
       SELECT s.codigo, p.id AS perfil_id, p.marcadores, pe.nombres, pe.apellidos, p."codigoMuestra" AS muestra
       FROM "Sticker" s
       JOIN "PerfilGenetico" p ON p."stickerId" = s.id
       JOIN "Persona" pe ON pe.id = s."personaId"
       JOIN "VinculoDactilogenetico" v ON v."stickerId" = s.id AND v.estado = 'VIGENTE'
-      ORDER BY (s.codigo = ${codigo ?? ''}) DESC, s."createdAt" ASC
+      ORDER BY (s.codigo = ${codigo}) DESC, s."createdAt" ASC
       LIMIT 1`;
     const f = filas[0];
     if (!f) throw new Error('No hay ninguna persona con vínculo firmado. Ejecuta npm run demo:reset.');

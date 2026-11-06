@@ -4,7 +4,7 @@
 import { INestApplicationContext } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { Rol } from '@prisma/client';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { AfisService } from '../../src/afis/afis.service';
 import { AppModule } from '../../src/app.module';
@@ -18,27 +18,27 @@ import { StickersService } from '../../src/stickers/stickers.service';
 import { VerificacionService } from '../../src/verificacion/verificacion.controller';
 import { VinculosService } from '../../src/vinculos/vinculos.service';
 import { construirCmf, pdfSimple, perfilGlobalFiler } from './cmf';
+import { CODIGOS_DEMO } from './codigos';
 
 const RAIZ = join(__dirname, '..', '..', '..');
 const FVC = join(RAIZ, 'datasets', 'fvc2002');
-const DEMO = join(RAIZ, 'examples', 'demo');
-const DPI: Record<string, number> = { DB1_B: 500, DB2_B: 569, DB3_B: 500, DB4_B: 500 };
+export const DPI: Record<string, number> = { DB1_B: 500, DB2_B: 569, DB3_B: 500, DB4_B: 500 };
 
-type Dedo = { db: string; dedo: number };
-const ruta = (d: Dedo, imp: number) => join(FVC, d.db, `${d.dedo}_${imp}.tif`);
+export type Dedo = { db: string; dedo: number };
+export const ruta = (d: Dedo, imp: number) => join(FVC, d.db, `${d.dedo}_${imp}.tif`);
 const rel = (d: Dedo, imp: number) => `datasets/fvc2002/${d.db}/${d.dedo}_${imp}.tif`;
 const id = (d: Dedo) => `${d.db}/${d.dedo}`;
 
 // ---------------------------------------------------------------- Reparto de los 40 dedos de FVC2002 (DB1–DB4, sets B)
-const DESCONOCIDO: Dedo = { db: 'DB4_B', dedo: 103 }; // nunca se registra: huella_desconocida.png
+export const DESCONOCIDO: Dedo = { db: 'DB4_B', dedo: 103 }; // nunca se registra: huella_desconocida.png
 const RESERVA_LAB: Dedo[] = [
   { db: 'DB1_B', dedo: 105 },
   { db: 'DB1_B', dedo: 109 },
 ]; // sticker en laboratorio del guion
-const RESERVA_TOMA: Dedo = { db: 'DB1_B', dedo: 107 }; // la carga en vivo el operador en el video
-const VERIFICAR: Dedo = { db: 'DB1_B', dedo: 106 }; // su impresión _5 es huella_para_verificar.png
+export const RESERVA_TOMA: Dedo = { db: 'DB1_B', dedo: 107 }; // la carga en vivo el operador en el video
+export const VERIFICAR: Dedo = { db: 'DB1_B', dedo: 106 }; // su impresión _5 es paso6_verificacion/1_huella_registrada.png
 const DUPLICADO_SEMBRADO: Dedo = { db: 'DB2_B', dedo: 101 }; // su impresión _2 se carga a otra persona
-const DUPLICADO_TOMA: Dedo = { db: 'DB1_B', dedo: 108 }; // su impresión _3 es dedo_repetido.png
+export const DUPLICADO_TOMA: Dedo = { db: 'DB1_B', dedo: 108 }; // su impresión _3 es paso3_toma/huella_medio_derecho_repetida.png
 
 const reservados = new Set([DESCONOCIDO, ...RESERVA_LAB, RESERVA_TOMA].map(id));
 const PARA_PERSONAS: Dedo[] = [];
@@ -120,9 +120,16 @@ async function sembrar(app: INestApplicationContext, base: { usuarios: Usuarios;
   const plantilla10 = base.plantillas['Chile'];
   const lote1 = await stickers.crearLote({ plantillaId: plantilla5, cantidad: 20, fechaFabricacion: new Date(ahora - 80 * DIA).toISOString().slice(0, 10), versionDiseno: '2.0', fabrica: 'Adhesivos Médicos del Pacífico S.A. · Planta Quilicura' }, ctx('admin', ahora - 78 * DIA));
   await stickers.crearLote({ plantillaId: plantilla10, cantidad: 10, fechaFabricacion: new Date(ahora - 45 * DIA).toISOString().slice(0, 10), versionDiseno: '2.1', fabrica: 'Adhesivos Médicos del Pacífico S.A. · Planta Quilicura' }, ctx('admin', ahora - 44 * DIA));
-  await stickers.crearLote({ plantillaId: plantilla5, cantidad: 10, fechaFabricacion: new Date(ahora - 12 * DIA).toISOString().slice(0, 10), versionDiseno: '2.1', fabrica: 'Adhesivos Médicos del Pacífico S.A. · Planta Quilicura' }, ctx('admin', ahora - 11 * DIA));
+  const lote3 = await stickers.crearLote({ plantillaId: plantilla5, cantidad: 10, fechaFabricacion: new Date(ahora - 12 * DIA).toISOString().slice(0, 10), versionDiseno: '2.1', fabrica: 'Adhesivos Médicos del Pacífico S.A. · Planta Quilicura' }, ctx('admin', ahora - 11 * DIA));
   console.log('✓ 3 lotes, 40 stickers con QR firmado y evento de fabricación.');
-  const codigos = lote1.stickers.map((s) => s.codigo);
+  // Códigos fijos para los stickers de la demostración (el evento de fabricación no incluye el código,
+  // así que renombrarlos no afecta la cadena de custodia; la firma del QR se calcula sobre el código).
+  const fijos: [string, string][] = [
+    ...[...CODIGOS_DEMO.personas, CODIGOS_DEMO.esperando, CODIGOS_DEMO.duplicado].map((c, i) => [lote1.stickers[i].codigo, c] as [string, string]),
+    [lote3.stickers[0].codigo, CODIGOS_DEMO.enVivo],
+  ];
+  for (const [aleatorio, fijo] of fijos) await prisma.sticker.update({ where: { codigo: aleatorio }, data: { codigo: fijo } });
+  const codigos = [...CODIGOS_DEMO.personas, CODIGOS_DEMO.esperando, CODIGOS_DEMO.duplicado];
 
   const asignacion: Record<string, unknown>[] = [];
   const perfiles: Record<string, Record<string, string[]>> = {};
@@ -202,7 +209,7 @@ async function sembrar(app: INestApplicationContext, base: { usuarios: Usuarios;
     { posicion: 4, motivo: 'Crestas ilegibles: grafito insuficiente en la casilla' },
     { posicion: 5, motivo: 'Crestas ilegibles: grafito insuficiente en la casilla' },
   ]);
-  RESERVA_LAB.forEach((d, j) => asignacion.push({ persona: `${LAB_A.nombres} ${LAB_A.apellidos}`, sticker: codigoLabA, posicion: j + 1, dedo: DEDOS[j + 1], archivo: rel(d, 1), dpi: DPI[d.db], nota: 'Enviado al laboratorio externo, esperando el resultado (guion, paso 4)' }));
+  RESERVA_LAB.forEach((d, j) => asignacion.push({ persona: `${LAB_A.nombres} ${LAB_A.apellidos}`, sticker: codigoLabA, posicion: j + 1, dedo: DEDOS[j + 1], archivo: rel(d, 1), dpi: DPI[d.db], nota: 'Enviado al laboratorio externo, esperando el resultado' }));
 
   // ------------------------------------------------------------ Caso de duplicado: otra persona con la impresión _2 de un dedo ya registrado
   const codigoLabB = codigos[9];
@@ -230,69 +237,37 @@ async function sembrar(app: INestApplicationContext, base: { usuarios: Usuarios;
   await stickers.resolverQr(`${url.split('/s/')[0]}/s/TG-7Q2M-K9XD.${'x'.repeat(86)}`, ctx('operador', ahora - hora(6)));
   console.log('✓ Verificaciones del mes e intentos de QR falso registrados en auditoría.');
 
-  // ------------------------------------------------------------ Archivos para el video (examples/demo)
-  mkdirSync(join(DEMO, 'toma'), { recursive: true });
-  const png = async (d: Dedo, imp: number) => {
-    const e = await afis.extraer(readFileSync(ruta(d, imp)), DPI[d.db]);
-    return Buffer.from(e.png!, 'base64');
-  };
-  writeFileSync(join(DEMO, 'huella_para_verificar.png'), await png(VERIFICAR, 5));
-  writeFileSync(join(DEMO, 'huella_desconocida.png'), await png(DESCONOCIDO, 2));
-  writeFileSync(join(DEMO, 'toma', 'dedo_nuevo_indice_derecho.png'), await png(RESERVA_TOMA, 1));
-  writeFileSync(join(DEMO, 'toma', 'dedo_repetido.png'), await png(DUPLICADO_TOMA, 3));
-
-  const fechaArchivos = new Date('2026-11-02T09:00:00Z'); // fija: los archivos de ejemplo no cambian entre siembras
-  const perfilLab = perfilGlobalFiler(101, LAB_A.sexo);
-  writeFileSync(join(DEMO, 'perfil_sticker_en_lab.xml'), construirCmf([{ id: codigoLabA, marcadores: perfilLab }], fechaArchivos));
-  writeFileSync(join(DEMO, 'perfil_otra_muestra.xml'), construirCmf([{ id: 'TG-9Q4M-2XKD', marcadores: perfilGlobalFiler(202, 'M') }], fechaArchivos));
-  const registrada = PERSONAS[4];
-  writeFileSync(join(DEMO, 'perfil_persona_registrada.xml'), construirCmf([{ id: 'CONSULTA-2026-0912', marcadores: perfiles[codigos[4]], categoria: 'Query' }], fechaArchivos));
-  writeFileSync(
-    join(DEMO, 'consentimiento_firmado.pdf'),
-    pdfSimple('Consentimiento informado · TrazaGen', [
-      'Versión 3.2 del texto aprobado por el Comité Ético Científico.',
-      '',
-      'La persona autoriza la toma de huellas dactilares y de una muestra de células',
-      'epiteliales mediante el sticker TrazaGen, para generar su identificación',
-      'dactilogenética. Sus datos personales se guardan cifrados y separados.',
-      '',
-      'Firma: ______________________     Fecha: ____ / ____ / ______',
-      '',
-      'Documento ficticio para la demostración de TrazaGen.',
-    ]),
-  );
-
   const dueñoVerificar = asignacion.find((a) => a.archivo === rel(VERIFICAR, 1));
   const dueñoRepetido = asignacion.find((a) => a.archivo === rel(DUPLICADO_TOMA, 1));
   const resumen = {
     descripcion: 'Reparto de las huellas de FVC2002 (sets B, DB1–DB4) entre las personas de la demo. Lo genera la siembra; no editar a mano.',
     dpi: DPI,
     personas: asignacion,
-    sinAsignar: { archivo: `datasets/fvc2002/${DESCONOCIDO.db}/${DESCONOCIDO.dedo}_*.tif`, uso: 'huella_desconocida.png (impresión _2): ningún dedo registrado' },
+    sinAsignar: { archivo: `datasets/fvc2002/${DESCONOCIDO.db}/${DESCONOCIDO.dedo}_*.tif`, uso: 'examples/demo/paso6_verificacion/2_huella_desconocida.png (impresión _2): ningún dedo registrado' },
     reservados: {
-      tomaEnVivo: { archivo: rel(RESERVA_TOMA, 1), uso: 'examples/demo/toma/dedo_nuevo_indice_derecho.png: dedo limpio para cargar en el video' },
+      tomaEnVivo: { archivo: rel(RESERVA_TOMA, 1), uso: 'examples/demo/paso3_toma/huella_indice_derecho.png: dedo limpio para cargar en vivo' },
     },
     archivosDemo: {
-      'huella_para_verificar.png': { origen: rel(VERIFICAR, 5), dueño: dueñoVerificar },
-      'huella_desconocida.png': { origen: rel(DESCONOCIDO, 2), dueño: null },
-      'toma/dedo_nuevo_indice_derecho.png': { origen: rel(RESERVA_TOMA, 1), dueño: null },
-      'toma/dedo_repetido.png': { origen: rel(DUPLICADO_TOMA, 3), dueño: dueñoRepetido },
-      'perfil_sticker_en_lab.xml': { sticker: codigoLabA, specimenId: codigoLabA },
-      'perfil_otra_muestra.xml': { specimenId: 'TG-9Q4M-2XKD', esperado: 'rechazo' },
-      'perfil_persona_registrada.xml': { coincideCon: `${registrada.nombres} ${registrada.apellidos}`, sticker: codigos[4] },
+      'paso6_verificacion/1_huella_registrada.png': { origen: rel(VERIFICAR, 5), dueño: dueñoVerificar },
+      'paso6_verificacion/2_huella_desconocida.png': { origen: rel(DESCONOCIDO, 2), dueño: null },
+      'paso3_toma/huella_indice_derecho.png': { origen: rel(RESERVA_TOMA, 1), dueño: null },
+      'paso3_toma/huella_medio_derecho_repetida.png': { origen: rel(DUPLICADO_TOMA, 3), dueño: dueñoRepetido },
+      'paso6_verificacion/3_perfil_registrado.xml': { coincideCon: `${PERSONAS[4].nombres} ${PERSONAS[4].apellidos}`, sticker: codigos[4] },
     },
     stickers: {
-      enLaboratorioGuion: { codigo: codigoLabA, estado: 'Enviado al laboratorio externo, esperando el resultado' },
-      duplicado: { codigo: codigoLabB, estado: 'Enviado al laboratorio externo, esperando el resultado' },
+      enVivo: { codigo: CODIGOS_DEMO.enVivo, estado: 'Nuevo: para la toma completa en vivo' },
+      esperando: { codigo: CODIGOS_DEMO.esperando, estado: 'Enviado al laboratorio externo, esperando el resultado' },
+      duplicado: { codigo: CODIGOS_DEMO.duplicado, estado: 'Huella duplicada; enviado al laboratorio externo' },
       alterable: { codigo: codigos[1], persona: `${PERSONAS[1].nombres} ${PERSONAS[1].apellidos}` },
     },
   };
   writeFileSync(join(RAIZ, 'datasets', 'asignacion.json'), JSON.stringify(resumen, null, 2) + '\n');
 
   const totalNuevos = await prisma.sticker.count({ where: { estado: 'NUEVO' } });
-  console.log(`✓ examples/demo y datasets/asignacion.json actualizados.`);
-  console.log(`\n  Sticker esperando el resultado del laboratorio (guion): ${codigoLabA}`);
-  console.log(`  Sticker con huella duplicada:         ${codigoLabB}`);
-  console.log(`  huella_para_verificar.png pertenece a ${dueñoVerificar?.persona} (${dueñoVerificar?.dedo}, ${dueñoVerificar?.sticker})`);
+  console.log(`✓ datasets/asignacion.json (reparto de huellas; igual en cada siembra).`);
+  console.log(`\n  Sticker para la toma en vivo:     ${CODIGOS_DEMO.enVivo}`);
+  console.log(`  Esperando resultado del lab:      ${CODIGOS_DEMO.esperando}`);
+  console.log(`  Sticker con huella duplicada:     ${codigoLabB}`);
+  console.log(`  1_huella_registrada.png pertenece a ${dueñoVerificar?.persona} (${dueñoVerificar?.dedo}, ${dueñoVerificar?.sticker})`);
   console.log(`  Stickers NUEVO disponibles: ${totalNuevos}`);
 }
