@@ -77,7 +77,9 @@ describe('Cadena de hashes de la custodia', () => {
 
 // Requiere la base de datos de server/.env con las migraciones aplicadas.
 describe('Trigger de PostgreSQL: EventoCustodia es de solo inserción', () => {
-  const db = new Client({ connectionString: process.env.DATABASE_URL?.replace(/\?schema=.*/, '') });
+  const url = new URL(process.env.DATABASE_URL ?? 'postgresql://localhost/trazagen');
+  url.searchParams.delete('schema'); // parámetro propio de Prisma
+  const db = new Client({ connectionString: url.toString() });
   beforeAll(() => db.connect());
   afterAll(() => db.end());
 

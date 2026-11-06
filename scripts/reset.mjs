@@ -25,6 +25,7 @@ try {
   rmSync(sql, { force: true });
 }
 paso('Aplicando migraciones');
+correr(npx, ['prisma', 'generate'], SERVER);
 correr(npx, ['prisma', 'migrate', 'deploy'], SERVER);
 paso('Sembrando datos de demostración');
 const detener = await conAfis();
