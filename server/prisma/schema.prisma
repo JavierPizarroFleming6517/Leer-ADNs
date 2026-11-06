@@ -1,3 +1,4 @@
+// TrazaGen · modelo de datos. El eje es el sticker: su código es el ID dactilogenético.
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,36 +8,308 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Rol {
+  ADMIN
+  OPERADOR_TOMA
+  LABORATORIO
+  VERIFICADOR
+}
+
+enum EstadoSticker {
+  NUEVO
+  PROCESADO
+  EN_USO
+  FINALIZADO
+}
+
+enum OrigenHuella {
+  ESCANER
+  FOTO
+}
+
+enum TipoEvento {
+  FABRICACION
+  TOMA
+  DIGITALIZACION_HUELLAS
+  ENVIO
+  RECEPCION_LAB
+  EXTRACCION
+  CUANTIFICACION
+  AMPLIFICACION
+  ELECTROFORESIS
+  INTERPRETACION
+  PERFIL_CARGADO
+  VINCULO_FIRMADO
+  VERIFICACION
+}
+
+enum EstadoVinculo {
+  VIGENTE
+  REVOCADO
+}
+
+model Usuario {
+  id           String   @id @default(uuid()) @db.Uuid
+  nombre       String
+  email        String   @unique
+  rol          Rol
+  institucion  String?
+  passwordHash String
+  activo       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  lotes      Lote[]
+  tomas      TomaMuestra[]
+  eventos    EventoCustodia[]
+  vinculos   VinculoDactilogenetico[] @relation("firmante")
+  auditorias Auditoria[]
+}
+
+model PlantillaSticker {
+  id        String   @id @default(uuid()) @db.Uuid
+  nombre    String   @unique
+  pais      String
+  // Posiciones ANSI/NIST: 1 pulgar derecho … 5 meñique derecho, 6 pulgar izquierdo … 10 meñique izquierdo.
+  posiciones Int[]
+  createdAt DateTime @default(now())
+  lotes     Lote[]
+}
+
+model Kit {
+  id         String   @id @default(uuid()) @db.Uuid
+  nombre     String   @unique
+  fabricante String
+  loci       String[]
+  createdAt  DateTime @default(now())
+}
+
+model Lote {
+  id                String           @id @default(uuid()) @db.Uuid
+  codigo            String           @unique
+  plantillaId       String           @db.Uuid
+  plantilla         PlantillaSticker @relation(fields: [plantillaId], references: [id])
+  cantidad          Int
+  fechaFabricacion  DateTime         @db.Date
+  versionDiseno     String
+  fabrica           String
+  creadoPorId       String           @db.Uuid
+  creadoPor         Usuario          @relation(fields: [creadoPorId], references: [id])
+  createdAt         DateTime         @default(now())
+  stickers          Sticker[]
+}
+
+model Sticker {
+  id           String        @id @default(uuid()) @db.Uuid
+  codigo       String        @unique
+  loteId       String        @db.Uuid
+  lote         Lote          @relation(fields: [loteId], references: [id])
+  estado       EstadoSticker @default(NUEVO)
+  personaId    String?       @db.Uuid
+  persona      Persona?      @relation(fields: [personaId], references: [id])
+  vinculadoEn  DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  toma      TomaMuestra?
+  huellas   Huella[]
+  muestra   MuestraBiologica?
+  perfil    PerfilGenetico?
+  adjuntos  ArchivoAdjunto[]
+  eventos   EventoCustodia[]
+  vinculos  VinculoDactilogenetico[]
+
+  @@index([estado])
+  @@index([loteId])
+}
+
+// Datos personales sensibles, en tabla separada. Documento y fecha de nacimiento cifrados (AES-256-GCM).
 model Persona {
-  id              String          @id @default(uuid()) @db.Uuid
-  nombreCompleto  String
-  identificador   String          @unique
-  fechaNacimiento DateTime?       @db.Date
-  nacionalidad    String?
-  qrTokenHash     String?         @unique
-  qrGeneradoEn    DateTime?
-  createdAt       DateTime        @default(now())
-  perfilGenetico  PerfilGenetico?
-  huellaDactilar  HuellaDactilar?
+  id                     String    @id @default(uuid()) @db.Uuid
+  nombres                String
+  apellidos              String
+  tipoDocumento          String
+  numeroDocumentoCifrado String
+  documentoIndiceCiego   String    @unique
+  pais                   String
+  nacionalidad           String
+  fechaNacimientoCifrada String?
+  sexoDeclarado          String?
+  institucion            String?
+  createdAt              DateTime  @default(now())
+
+  stickers         Sticker[]
+  consentimientos  Consentimiento[]
+  tomas            TomaMuestra[]
+  vinculos         VinculoDactilogenetico[]
+}
+
+model Consentimiento {
+  id               String   @id @default(uuid()) @db.Uuid
+  personaId        String   @db.Uuid
+  persona          Persona  @relation(fields: [personaId], references: [id])
+  versionTexto     String
+  fechaFirma       DateTime
+  entidadRevisora  String
+  archivoNombre    String
+  archivoSha256    String
+  archivo          Bytes
+  createdAt        DateTime @default(now())
+}
+
+model TomaMuestra {
+  id             String   @id @default(uuid()) @db.Uuid
+  stickerId      String   @unique @db.Uuid
+  sticker        Sticker  @relation(fields: [stickerId], references: [id])
+  personaId      String   @db.Uuid
+  persona        Persona  @relation(fields: [personaId], references: [id])
+  fechaHora      DateTime
+  lugar          String
+  operadorId     String   @db.Uuid
+  operador       Usuario  @relation(fields: [operadorId], references: [id])
+  observaciones  String?
+  // [{ posicion: 3, motivo: "Amputación" }]
+  dedosNoObtenibles Json  @default("[]")
+  createdAt      DateTime @default(now())
+}
+
+model Huella {
+  id              String       @id @default(uuid()) @db.Uuid
+  stickerId       String       @db.Uuid
+  sticker         Sticker      @relation(fields: [stickerId], references: [id])
+  posicion        Int
+  archivoNombre   String
+  mimeOriginal    String
+  imagenOriginal  Bytes
+  imagenPng       Bytes
+  sha256Imagen    String
+  dpi             Int
+  origen          OrigenHuella
+  ancho           Int
+  alto            Int
+  plantilla       Bytes
+  sha256Plantilla String
+  cantidadMinucias Int
+  minucias        Json
+  createdAt       DateTime     @default(now())
+
+  coincidencias   CoincidenciaHuella[] @relation("sonda")
+  coincididaPor   CoincidenciaHuella[] @relation("candidata")
+
+  @@unique([stickerId, posicion])
+}
+
+// Resultado del control 1:N al digitalizar: posibles duplicados entre stickers distintos.
+model CoincidenciaHuella {
+  id          String   @id @default(uuid()) @db.Uuid
+  huellaId    String   @db.Uuid
+  huella      Huella   @relation("sonda", fields: [huellaId], references: [id])
+  candidataId String   @db.Uuid
+  candidata   Huella   @relation("candidata", fields: [candidataId], references: [id])
+  puntaje     Float
+  umbral      Float
+  createdAt   DateTime @default(now())
+}
+
+model MuestraBiologica {
+  id             String   @id @default(uuid()) @db.Uuid
+  codigo         String   @unique
+  stickerId      String   @unique @db.Uuid
+  sticker        Sticker  @relation(fields: [stickerId], references: [id])
+  laboratorio    String
+  estadoSello    String
+  etapaActual    TipoEvento
+  etapaDesde     DateTime
+  adnUgMl        Float?
+  kit            String?
+  loteKit        String?
+  equipos        String?
+  tubosAlmacenados Int?
+  materialRestante Boolean @default(true)
+  createdAt      DateTime @default(now())
 }
 
 model PerfilGenetico {
-  id            String   @id @default(uuid()) @db.Uuid
-  personaId     String   @unique @db.Uuid
-  codigoMuestra String?
-  marcadoresSTR Json
-  formatoOrigen String?
-  archivoOrigen String?
-  hashArchivo   String?
-  createdAt     DateTime @default(now())
-  persona       Persona  @relation(fields: [personaId], references: [id], onDelete: Cascade)
+  id             String   @id @default(uuid()) @db.Uuid
+  stickerId      String   @unique @db.Uuid
+  sticker        Sticker  @relation(fields: [stickerId], references: [id])
+  codigoMuestra  String
+  marcadores     Json
+  kit            String
+  formatoOrigen  String
+  archivoId      String   @db.Uuid
+  archivo        ArchivoAdjunto @relation(fields: [archivoId], references: [id])
+  archivoSha256  String
+  createdAt      DateTime @default(now())
 }
 
-model HuellaDactilar {
-  id                 String   @id @default(uuid()) @db.Uuid
-  personaId          String   @unique @db.Uuid
-  referenciaSimulada String?
-  estado             String
-  createdAt          DateTime @default(now())
-  persona            Persona  @relation(fields: [personaId], references: [id], onDelete: Cascade)
+// Archivos de laboratorio guardados sin modificar: almacenados, no interpretados.
+model ArchivoAdjunto {
+  id          String   @id @default(uuid()) @db.Uuid
+  stickerId   String?  @db.Uuid
+  sticker     Sticker? @relation(fields: [stickerId], references: [id])
+  etapa       TipoEvento?
+  nombre      String
+  mime        String
+  tamano      Int
+  sha256      String
+  datos       Bytes
+  interpretado Boolean @default(false)
+  createdAt   DateTime @default(now())
+  perfiles    PerfilGenetico[]
+}
+
+// Solo inserción: un trigger de PostgreSQL rechaza UPDATE, DELETE y TRUNCATE.
+model EventoCustodia {
+  id                String     @id @default(uuid()) @db.Uuid
+  stickerId         String     @db.Uuid
+  sticker           Sticker    @relation(fields: [stickerId], references: [id])
+  secuencia         Int
+  tipo              TipoEvento
+  fecha             DateTime
+  responsableId     String     @db.Uuid
+  responsable       Usuario    @relation(fields: [responsableId], references: [id])
+  responsableNombre String
+  detalle           Json
+  archivoSha256     String?
+  hashAnterior      String
+  hashEvento        String     @unique
+  createdAt         DateTime   @default(now())
+
+  @@unique([stickerId, secuencia])
+  @@index([fecha])
+}
+
+model VinculoDactilogenetico {
+  id           String        @id @default(uuid()) @db.Uuid
+  stickerId    String        @db.Uuid
+  sticker      Sticker       @relation(fields: [stickerId], references: [id])
+  personaId    String        @db.Uuid
+  persona      Persona       @relation(fields: [personaId], references: [id])
+  documento    String
+  documentoSha256 String
+  firma        String
+  llavePublica String
+  estado       EstadoVinculo @default(VIGENTE)
+  firmadoPorId String        @db.Uuid
+  firmadoPor   Usuario       @relation("firmante", fields: [firmadoPorId], references: [id])
+  firmadoEn    DateTime
+  revocadoEn   DateTime?
+  createdAt    DateTime      @default(now())
+}
+
+model Auditoria {
+  id         String   @id @default(uuid()) @db.Uuid
+  usuarioId  String?  @db.Uuid
+  usuario    Usuario? @relation(fields: [usuarioId], references: [id])
+  usuarioNombre String?
+  rol        String?
+  accion     String
+  recurso    String?
+  detalle    Json?
+  ip         String?
+  exito      Boolean  @default(true)
+  fecha      DateTime @default(now())
+
+  @@index([fecha])
+  @@index([accion])
 }

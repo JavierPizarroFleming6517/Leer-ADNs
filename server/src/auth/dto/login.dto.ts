@@ -1,8 +1,12 @@
-import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import { IsEmail, IsString, MaxLength, MinLength } from 'class-validator';
 
 export class LoginDto {
-  @IsString({ message: 'La contraseña es obligatoria.' })
-  @IsNotEmpty({ message: 'La contraseña es obligatoria.' })
-  @MaxLength(200, { message: 'La contraseña es demasiado larga.' })
+  @IsEmail({}, { message: 'Ingresa un correo válido.' })
+  @MaxLength(200)
+  email!: string;
+
+  @IsString()
+  @MinLength(1, { message: 'Ingresa la contraseña.' })
+  @MaxLength(200)
   password!: string;
 }
