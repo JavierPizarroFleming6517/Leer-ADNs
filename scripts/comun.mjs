@@ -92,8 +92,13 @@ export async function conAfis() {
   if (await afisVivo()) return () => {};
   compilarAfis();
   const p = lanzarAfis();
+  // Si el script termina por un error (process.exit), el afis temporal no debe quedar huérfano.
+  const detener = () => {
+    if (p.exitCode === null) p.kill();
+  };
+  process.on('exit', detener);
   for (let i = 0; i < 60; i++) {
-    if (await afisVivo()) return () => p.kill();
+    if (await afisVivo()) return detener;
     await new Promise((r) => setTimeout(r, 500));
   }
   p.kill();
