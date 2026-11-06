@@ -15,12 +15,21 @@ if (!url) {
   console.error('✗ Falta DATABASE_URL en server/.env. Ejecuta primero npm run setup.');
   process.exit(1);
 }
-const esquema = new URL(url).searchParams.get('schema') || 'public';
+let dbUrl;
+try {
+  dbUrl = new URL(url);
+  if (!/^postgres(ql)?:$/.test(dbUrl.protocol)) throw new Error();
+} catch {
+  const origen = process.env.DATABASE_URL ? 'la variable DATABASE_URL de tu terminal (tiene prioridad sobre server/.env; quítala con "unset DATABASE_URL")' : 'server/.env';
+  console.error(`✗ DATABASE_URL no es una cadena de PostgreSQL válida. Viene de ${origen}.\n  Valor: ${url.replace(/:[^:@/]*@/, ':****@')}\n  Debe verse así: DATABASE_URL=postgresql://usuario:clave@host:5432/base?schema=public`);
+  process.exit(1);
+}
+const esquema = dbUrl.searchParams.get('schema') || 'public';
 if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(esquema)) {
   console.error('✗ Nombre de esquema no válido en DATABASE_URL.');
   process.exit(1);
 }
-const host = new URL(url).hostname;
+const host = dbUrl.hostname;
 paso(`Recreando el esquema "${esquema}" en ${host}`);
 const sql = join(tmpdir(), `trazagen-reset-${process.pid}.sql`);
 writeFileSync(sql, `DROP SCHEMA IF EXISTS "${esquema}" CASCADE;\nCREATE SCHEMA "${esquema}";\n`);
