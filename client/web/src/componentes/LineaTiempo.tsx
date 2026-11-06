@@ -8,15 +8,11 @@ const ICONOS: Record<string, (p: { className?: string }) => ReactNode> = {
   TOMA: Icon.user,
   DIGITALIZACION_HUELLAS: Icon.fingerprint,
   ENVIO: Icon.arrowRight,
-  RECEPCION_LAB: Icon.flask,
-  EXTRACCION: Icon.flask,
-  CUANTIFICACION: Icon.flask,
-  AMPLIFICACION: Icon.dna,
-  ELECTROFORESIS: Icon.dna,
-  INTERPRETACION: Icon.eye,
   PERFIL_CARGADO: Icon.dna,
   VINCULO_FIRMADO: Icon.shield,
   VERIFICACION: Icon.badge,
+  MATERIAL_AGOTADO: Icon.box,
+  ANULACION: Icon.x,
 };
 
 function resumenDetalle(e: Evento): string {
@@ -32,16 +28,14 @@ function resumenDetalle(e: Evento): string {
     }
     case 'ENVIO':
       return `Destino: ${d.destino}`;
-    case 'RECEPCION_LAB':
-      return `Muestra ${d.codigoMuestra} · sello ${String(d.estadoSello).toLowerCase().replace('danado', 'dañado')}`;
-    case 'CUANTIFICACION':
-      return d.materialAgotado ? 'Material agotado' : `ADN ${d.adnUgMl} µg/ml`;
-    case 'AMPLIFICACION':
-      return d.materialAgotado ? 'Material agotado' : `Kit ${d.kit}${d.loteKit ? ` · lote ${d.loteKit}` : ''}`;
     case 'PERFIL_CARGADO':
-      return `${d.formato} · ${d.codis} CODIS · kit ${d.kit}`;
+      return `${d.laboratorio ? `${d.laboratorio} · ` : ''}${d.formato} · ${d.codis} CODIS · kit ${d.kit}${d.materialRestante === false ? ' · sin material' : ''}`;
+    case 'MATERIAL_AGOTADO':
+      return String(d.observaciones ?? 'El laboratorio informa que no queda material');
+    case 'ANULACION':
+      return `Motivo: ${d.motivo}`;
     case 'VINCULO_FIRMADO':
-      return `Ed25519 · ${d.huellas} huellas · muestra ${d.codigoMuestra}`;
+      return `Ed25519 · ${d.huellas} huellas · perfil ${d.codigoMuestra}`;
     case 'VERIFICACION':
       return d.tipo === 'HUELLA_1_N'
         ? `Búsqueda por huella: ${d.dedo}, puntaje ${d.puntaje}`
@@ -49,8 +43,7 @@ function resumenDetalle(e: Evento): string {
           ? `Búsqueda por perfil STR: ${d.lociComparados} loci`
           : `Integridad del vínculo: ${d.resultado}`;
     default:
-      if (d.materialAgotado) return 'Material agotado';
-      return [d.metodo, d.equipos, d.software].filter(Boolean).join(' · ');
+      return '';
   }
 }
 
@@ -60,7 +53,7 @@ export function LineaTiempo({ eventos, errores = [], mostrarSticker = false }: {
       {eventos.map((e, i) => {
         const I = ICONOS[e.tipo] ?? Icon.chain;
         const mal = errores.includes(e.secuencia);
-        const alerta = e.tipo === 'VERIFICACION' && (e.detalle as { resultado?: string }).resultado === 'ALTERADO';
+        const alerta = e.tipo === 'ANULACION' || (e.tipo === 'VERIFICACION' && (e.detalle as { resultado?: string }).resultado === 'ALTERADO');
         return (
           <li key={e.id} className="relative flex gap-4 pb-6 last:pb-0">
             {i < eventos.length - 1 ? <span className="absolute left-[19px] top-10 h-[calc(100%-32px)] w-0.5 bg-line" /> : null}

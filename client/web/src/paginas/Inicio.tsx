@@ -2,20 +2,18 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { useCarga, useSesion } from '../sesion';
-import { Cargando, Encabezado, Icon, Vacio, fecha, hace } from '../ui';
+import { Cargando, ESTADOS, Encabezado, Icon, Vacio, fecha, hace } from '../ui';
 
 type DatosInicio = {
   stickersPorEstado: Record<string, number>;
   totalStickers: number;
-  laboratorio: {
-    porEtapa: { etapa: string; nombre: string; total: number; diasMax: number; diasProm: number }[];
-    muestras: { codigo: string; sticker: string; etapaNombre: string; diasEnEtapa: number; diasEnLab: number }[];
-  };
+  anulados: number;
+  // Enviados al laboratorio externo y todavía sin resultado.
+  laboratorio: { sticker: string; destino: string; enviado: string; dias: number }[];
   alertas: {
     duplicados: { sticker: string; dedo: string; coincideCon: string; dedoCoincidente: string; puntaje: number; fecha: string }[];
     vinculosInvalidos: { sticker: string; fallas: string[] }[];
     qrFalsos: { total: number; ultimos: { fecha: string; usuarioNombre: string | null; detalle: { motivo?: string } | null; ip: string | null }[] };
-    sellos: { sticker: string; muestra: string; estadoSello: string }[];
   };
   eventos: { id: string; sticker: string; nombre: string; fecha: string; responsable: string; hash: string }[];
   totales: { personas: number; huellas: number; vinculos: number; busquedasMes: number };
@@ -97,6 +95,54 @@ export default function Inicio() {
             ) : null}
             {!nAlertas ? <p className="rounded-xl bg-lima-50 px-4 py-3 text-sm text-lima-800">Todo en orden: sin duplicados, vínculos íntegros y sin intentos de QR falso.</p> : null}
           </div>
+        </section>
+      </div>
+
+      <div className="mt-6 grid gap-6 xl:grid-cols-2">
+        <section className="card p-5 sm:p-6">
+          <h2 className="mb-4 flex items-center gap-2 font-bold">
+            <Icon.qr className="h-5 w-5 text-celeste-600" /> Stickers por estado
+          </h2>
+          <div className="flex h-3 overflow-hidden rounded-full bg-surface">
+            {Object.entries(d.stickersPorEstado).map(([e, n]) => (n ? <div key={e} className={`${ESTADOS[e].punto} transition-all`} style={{ width: `${(n / Math.max(1, d.totalStickers)) * 100}%` }} /> : null))}
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            {Object.entries(d.stickersPorEstado).map(([e, n]) => (
+              <Link key={e} to={`/stickers?estado=${e}`} className="rounded-xl border border-line px-4 py-3 transition hover:border-celeste-200">
+                <p className="flex items-center gap-2 text-xs font-semibold text-ink-soft">
+                  <span className={`h-2 w-2 rounded-full ${ESTADOS[e].punto}`} /> {ESTADOS[e].nombre}
+                </p>
+                <p className="mt-1 font-mono text-2xl font-semibold">{n}</p>
+              </Link>
+            ))}
+          </div>
+          <p className="mt-3 text-xs text-ink-mute">
+            {d.totalStickers} stickers vigentes{d.anulados ? ` · ${d.anulados} anulado${d.anulados > 1 ? 's' : ''}` : ''}.
+          </p>
+        </section>
+
+        <section className="card p-5 sm:p-6">
+          <h2 className="mb-1 flex items-center gap-2 font-bold">
+            <Icon.flask className="h-5 w-5 text-celeste-600" /> En el laboratorio externo
+          </h2>
+          <p className="mb-4 text-xs text-ink-mute">Stickers enviados que aún no tienen resultado.</p>
+          {d.laboratorio.length ? (
+            <ul className="divide-y divide-line">
+              {d.laboratorio.map((m) => (
+                <li key={m.sticker}>
+                  <Link to={`/stickers/${m.sticker}/perfil`} className="flex items-center gap-3 py-2.5 text-sm hover:text-celeste-700" data-testid="esperando-laboratorio">
+                    <span className="font-mono font-semibold">{m.sticker}</span>
+                    <span className="min-w-0 flex-1 truncate text-xs text-ink-mute">{m.destino}</span>
+                    <span className={`chip ${m.dias > 7 ? 'bg-amber-100 text-amber-800' : 'bg-surface text-ink-soft'}`}>
+                      {m.dias} {m.dias === 1 ? 'día' : 'días'}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <Vacio icono={Icon.flask} titulo="Ningún sticker esperando resultado" />
+          )}
         </section>
       </div>
 

@@ -4,7 +4,8 @@ import { api } from '../api';
 import { useQr } from '../componentes/QrImagen';
 import { useCarga, useSesion } from '../sesion';
 import type { FichaSticker } from '../tipos';
-import { Aviso, Cargando, Icon, Modal, fecha } from '../ui';
+import { AccionesSticker } from '../componentes/AccionesSticker';
+import { Aviso, Cargando, ChipEstado, Icon, Modal, fecha } from '../ui';
 import CustodiaTab from './CustodiaTab';
 import HuellasTab from './HuellasTab';
 import PerfilTab from './PerfilTab';
@@ -20,10 +21,40 @@ const PESTANAS = [
   { id: 'persona', t: 'Persona y consentimiento', i: Icon.user },
   { id: 'toma', t: 'Toma', i: Icon.clock },
   { id: 'huellas', t: 'Huellas', i: Icon.fingerprint },
-  { id: 'perfil', t: 'Perfil genético', i: Icon.dna },
+  { id: 'perfil', t: 'Laboratorio y perfil', i: Icon.dna },
   { id: 'vinculo', t: 'Vínculo', i: Icon.shield },
   { id: 'custodia', t: 'Custodia', i: Icon.chain },
 ] as const;
+
+// Ciclo de vida del sticker (documento de la genetista), con el laboratorio como actor externo.
+export const CICLO = [
+  { e: 'NUEVO', t: 'Nuevo', d: 'Fabricado, sin uso' },
+  { e: 'PROCESADO', t: 'Procesado', d: 'Toma y huellas registradas' },
+  { e: 'EN_USO', t: 'En uso', d: 'Perfil recibido, queda material' },
+  { e: 'FINALIZADO', t: 'Finalizado', d: 'Sin material, se conserva el registro' },
+];
+
+function BarraCiclo({ estado }: { estado: string }) {
+  const actual = CICLO.findIndex((c) => c.e === estado);
+  return (
+    <ol className="grid grid-cols-4 gap-2" data-testid="ciclo">
+      {CICLO.map((c, i) => {
+        const hecho = i < actual;
+        const activo = i === actual;
+        return (
+          <li key={c.e} className="min-w-0">
+            <div className={`h-1.5 rounded-full transition-all ${hecho || activo ? (activo ? 'bg-celeste-600' : 'bg-lima-400') : 'bg-line'}`} />
+            <p className={`mt-2 flex items-center gap-1 text-xs font-semibold ${activo ? 'text-ink' : hecho ? 'text-ink-soft' : 'text-ink-mute'}`}>
+              {hecho ? <Icon.check className="h-3.5 w-3.5 text-lima-600" /> : null}
+              {c.t}
+            </p>
+            <p className="hidden truncate text-[11px] text-ink-mute sm:block">{c.d}</p>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
 
 export default function Ficha() {
   const { codigo = '', pestana = 'resumen' } = useParams();
@@ -41,12 +72,20 @@ export default function Ficha() {
   const actual = pestana;
   const props = { f, recargar };
   const operador = usuario && ['ADMIN', 'OPERADOR_TOMA'].includes(usuario.rol);
+  const anulado = f.sticker.anulado;
+  const sinUso = f.sticker.estado === 'NUEVO' && !f.persona;
 
   return (
     <div className={cargando ? 'opacity-90 transition' : ''}>
       {desdeQr?.desdeQr ? (
         <Aviso tono="ok" titulo={desdeQr.firmaVerificada ? 'QR auténtico: firma Ed25519 verificada' : 'Código encontrado en el registro de TrazaGen'} className="mb-5">
           {desdeQr.firmaVerificada ? 'El código fue emitido por esta plataforma y no fue alterado.' : 'Se ingresó el código a mano: el sticker existe, pero sin la firma del QR.'}
+        </Aviso>
+      ) : null}
+
+      {anulado ? (
+        <Aviso tono="error" titulo={`Sticker anulado el ${fecha(anulado.fecha)}`} className="mb-5">
+          {anulado.motivo ?? 'Sin motivo registrado.'} Su registro y su cadena de custodia se conservan; ya no admite cambios ni participa en las búsquedas.
         </Aviso>
       ) : null}
 
@@ -59,6 +98,7 @@ export default function Ficha() {
             <p className="eyebrow">ID dactilogenético</p>
             <div className="mt-1 flex flex-wrap items-center gap-3">
               <h1 className="font-mono text-2xl font-bold tracking-wide sm:text-3xl" data-testid="codigo-sticker">{f.sticker.codigo}</h1>
+              {anulado ? <span className="chip bg-red-100 text-red-700">Anulado</span> : <ChipEstado estado={f.sticker.estado} />}
               {f.vinculo ? (
                 <span className="chip bg-ink text-white">
                   <Icon.shield className="h-3.5 w-3.5 text-lima-400" /> Vínculo firmado
@@ -76,12 +116,22 @@ export default function Ficha() {
               <span className="text-ink-mute"> · Lote {f.sticker.lote.codigo} · {f.sticker.plantilla.nombre}</span>
             </p>
           </div>
-          {f.sticker.estado === 'NUEVO' && !f.persona && operador ? (
-            <button type="button" className="btn-primary" onClick={() => nav(`/stickers/${f.sticker.codigo}/persona`)} data-testid="iniciar-toma">
-              <Icon.arrowRight className="h-4 w-4" /> Iniciar toma
-            </button>
-          ) : null}
+          <div className="flex flex-wrap items-center gap-2">
+            {sinUso && operador && !anulado ? (
+              <button type="button" className="btn-primary" onClick={() => nav(`/stickers/${f.sticker.codigo}/persona`)} data-testid="iniciar-toma">
+                <Icon.arrowRight className="h-4 w-4" /> Iniciar toma
+              </button>
+            ) : null}
+            {usuario?.rol === 'ADMIN' ? (
+              <AccionesSticker codigo={f.sticker.codigo} sinUso={sinUso} anulado={Boolean(anulado)} onListo={(eliminado) => (eliminado ? nav('/stickers', { replace: true }) : recargar())} />
+            ) : null}
+          </div>
         </div>
+        {anulado ? null : (
+          <div className="border-t border-line bg-surface/50 px-5 py-4 sm:px-6">
+            <BarraCiclo estado={f.sticker.estado} />
+          </div>
+        )}
         <nav className="flex gap-1 overflow-x-auto border-t border-line px-3 sm:px-4" role="tablist">
           {PESTANAS.map((p) => (
             <Link

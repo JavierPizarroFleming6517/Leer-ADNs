@@ -11,7 +11,7 @@ const SEXOS = ['Femenino', 'Masculino', 'No binario', 'Prefiere no declarar'];
 
 export default function PersonaTab({ f, recargar }: TabProps) {
   const { puede } = useSesion();
-  const edita = puede('ADMIN', 'OPERADOR_TOMA');
+  const edita = puede('ADMIN', 'OPERADOR_TOMA') && !f.sticker.anulado;
   return (
     <div className="grid gap-5 xl:grid-cols-[1.2fr_1fr]">
       {f.persona ? <FichaPersona p={f.persona} /> : edita ? <AsociarPersona codigo={f.sticker.codigo} onOk={recargar} /> : <Seccion titulo="Persona"><Vacio icono={Icon.user} titulo="Sin persona asociada" /></Seccion>}

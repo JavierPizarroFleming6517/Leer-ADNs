@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect, useState } from 'react';
 import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import type { Rol } from './api';
+import { api } from './api';
 import Ficha from './ficha/Ficha';
 import Admin from './paginas/Admin';
 import Auditoria from './paginas/Auditoria';
@@ -25,8 +26,49 @@ export const MENU: Item[] = [
   { a: '/admin', texto: 'Administración', icono: Icon.cog, roles: ['ADMIN'] },
 ];
 
+type Salud = { api: boolean; db: boolean; afis: boolean; afisVersion: string | null; umbral: number };
+
+export function useSalud() {
+  const [s, setS] = useState<Salud | null>(null);
+  useEffect(() => {
+    let vivo = true;
+    const f = () =>
+      api<Salud>('/salud')
+        .then((r) => vivo && setS(r))
+        .catch(() => vivo && setS({ api: false, db: false, afis: false, afisVersion: null, umbral: 40 }));
+    f();
+    const t = setInterval(f, 8000);
+    return () => {
+      vivo = false;
+      clearInterval(t);
+    };
+  }, []);
+  return s;
+}
+
+// Estado de los servicios en la barra superior: API, base de datos y motor biométrico.
+function Servicios({ salud }: { salud: Salud | null }) {
+  const items = [
+    { n: 'API', ok: salud?.api, t: 'Servidor de la API' },
+    { n: 'Base de datos', ok: salud?.db, t: 'PostgreSQL' },
+    { n: 'Motor biométrico', ok: salud?.afis, t: salud?.afis ? `SourceAFIS ${salud.afisVersion} · umbral ${salud.umbral}` : 'Motor biométrico no disponible' },
+  ];
+  return (
+    <div className="hidden items-center gap-1 rounded-xl border border-line bg-white px-1.5 py-1 md:flex" data-testid="servicios">
+      {items.map((i) => (
+        <span key={i.n} title={i.t} className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-[11px] font-semibold text-ink-soft">
+          <span className={`h-2 w-2 rounded-full ${salud === null ? 'bg-slate-300' : i.ok ? 'bg-lima-400' : 'animate-pulse bg-red-500'}`} />
+          {i.n}
+          {salud && !i.ok ? <span className="text-red-600">· no disponible</span> : null}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function Layout({ children }: { children: ReactNode }) {
   const { usuario, salir } = useSesion();
+  const salud = useSalud();
   const [menu, setMenu] = useState(false);
   const loc = useLocation();
   useEffect(() => setMenu(false), [loc.pathname]);
@@ -91,6 +133,7 @@ function Layout({ children }: { children: ReactNode }) {
             <Marca compacta />
           </div>
           <div className="flex-1" />
+          <Servicios salud={salud} />
           {usuario ? (
             <div className="flex items-center gap-3 border-l border-line pl-3">
               <div className="sm:hidden">
@@ -108,6 +151,11 @@ function Layout({ children }: { children: ReactNode }) {
             </div>
           ) : null}
         </div>
+        {salud && !salud.afis ? (
+          <div className="flex items-center gap-2 border-t border-red-200 bg-red-50 px-4 py-2 text-xs font-semibold text-red-800 sm:px-6 lg:px-8" data-testid="afis-caido">
+            <Icon.alert className="h-4 w-4 shrink-0" /> Motor biométrico no disponible: la extracción y búsqueda de huellas están detenidas hasta que el servicio afis responda.
+          </div>
+        ) : null}
       </header>
       <main className="mx-auto w-full max-w-[1400px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
     </div>

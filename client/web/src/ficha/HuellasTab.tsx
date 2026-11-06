@@ -19,7 +19,7 @@ type RespuestaHuella = { huella: { id: string; posicion: number; dedo: string; c
 
 export default function HuellasTab({ f, recargar }: TabProps) {
   const { puede } = useSesion();
-  const edita = puede('ADMIN', 'OPERADOR_TOMA') && Boolean(f.persona);
+  const edita = puede('ADMIN', 'OPERADOR_TOMA') && Boolean(f.persona) && !f.sticker.anulado;
   const [origen, setOrigen] = useState<'ESCANER' | 'FOTO'>('ESCANER');
   const [dpi, setDpi] = useState(500);
   const [estados, setEstados] = useState<Record<number, EstadoCasilla>>({});

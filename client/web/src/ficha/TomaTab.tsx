@@ -13,10 +13,9 @@ function ahoraLocal() {
 
 export default function TomaTab({ f, recargar }: TabProps) {
   const { puede, usuario } = useSesion();
-  const edita = puede('ADMIN', 'OPERADOR_TOMA');
-  const envio = f.custodia.eventos.find((e) => e.tipo === 'ENVIO');
+  const edita = puede('ADMIN', 'OPERADOR_TOMA') && !f.sticker.anulado;
   return (
-    <div className="grid gap-5 xl:grid-cols-[1.3fr_1fr]">
+    <div className="max-w-4xl">
       {f.toma ? (
         <Seccion titulo="Toma de muestra" icono={Icon.clock} acciones={<span className="chip bg-lima-100 text-lima-800"><Icon.check className="h-3.5 w-3.5" /> Registrada</span>}>
           <dl className="grid gap-4 sm:grid-cols-2">
@@ -50,22 +49,6 @@ export default function TomaTab({ f, recargar }: TabProps) {
           <Vacio icono={Icon.clock} titulo="Toma pendiente">{f.persona ? 'El operador de toma registra lugar, fecha y dedos no obtenibles.' : 'Primero se asocia una persona al sticker.'}</Vacio>
         </Seccion>
       )}
-      <Seccion titulo="Envío al laboratorio" icono={Icon.box}>
-        {envio ? (
-          <dl className="grid gap-4 sm:grid-cols-2">
-            <Dato etiqueta="Enviado" valor={fecha(envio.fecha)} />
-            <Dato etiqueta="Destino" valor={String(envio.detalle.destino ?? '—')} />
-            <Dato etiqueta="Transportista" valor={String(envio.detalle.transportista ?? '—')} />
-            <Dato etiqueta="Sello" valor={<span className="font-mono">{String(envio.detalle.sello ?? '—')}</span>} />
-          </dl>
-        ) : f.muestra ? (
-          <p className="text-sm text-ink-soft">Recibido en laboratorio el {fecha(f.muestra.recibida)}.</p>
-        ) : edita && f.toma ? (
-          <FormEnvio codigo={f.sticker.codigo} recargar={recargar} />
-        ) : (
-          <p className="text-sm text-ink-mute">Se registra después de la toma.</p>
-        )}
-      </Seccion>
     </div>
   );
 }
@@ -150,43 +133,5 @@ function FormToma({ f, recargar, operador }: TabProps & { operador: string }) {
         </div>
       </form>
     </Seccion>
-  );
-}
-
-function FormEnvio({ codigo, recargar }: { codigo: string; recargar: () => void }) {
-  const [d, setD] = useState({ destino: 'GenLab Santiago · Laboratorio de Genética Forense', transportista: 'Courier clínico con cadena de frío', sello: '' });
-  const [error, setError] = useState('');
-  const [cargando, setCargando] = useState(false);
-  async function enviar(e: FormEvent) {
-    e.preventDefault();
-    setCargando(true);
-    try {
-      await post(`/stickers/${codigo}/envio`, { destino: d.destino, transportista: d.transportista, ...(d.sello ? { sello: d.sello } : {}) });
-      recargar();
-    } catch (err) {
-      setError(mensaje(err));
-    } finally {
-      setCargando(false);
-    }
-  }
-  return (
-    <form onSubmit={enviar} className="space-y-3">
-      <div>
-        <label className="label">Laboratorio de destino</label>
-        <input className="input" value={d.destino} onChange={(e) => setD({ ...d, destino: e.target.value })} required />
-      </div>
-      <div>
-        <label className="label">Transportista</label>
-        <input className="input" value={d.transportista} onChange={(e) => setD({ ...d, transportista: e.target.value })} />
-      </div>
-      <div>
-        <label className="label">N.º de sello de la bolsa</label>
-        <input className="input font-mono" value={d.sello} onChange={(e) => setD({ ...d, sello: e.target.value })} placeholder="SB-000000" />
-      </div>
-      {error ? <Aviso tono="error" titulo={error} /> : null}
-      <button type="submit" className="btn-secondary w-full" disabled={cargando}>
-        {cargando ? <Spinner /> : <Icon.arrowRight className="h-4 w-4" />} Registrar envío
-      </button>
-    </form>
   );
 }

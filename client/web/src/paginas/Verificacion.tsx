@@ -7,10 +7,10 @@ import { Subir } from '../componentes/Subir';
 import { LeyendaMinucias, VisorHuella } from '../componentes/VisorHuella';
 import { useSesion } from '../sesion';
 import type { Minucia, Resumen } from '../tipos';
-import { Aviso, Encabezado, Hash, Icon, Spinner, mensaje } from '../ui';
+import { Aviso, ChipEstado, Encabezado, Hash, Icon, Spinner, mensaje } from '../ui';
 
 export type ResultadoQr =
-  | { valido: true; codigo: string; estado: string; vinculado: boolean; firmaVerificada: boolean }
+  | { valido: true; codigo: string; estado: string; vinculado: boolean; anulado?: boolean; firmaVerificada: boolean }
   | { valido: false; motivo: string; codigo: string | null };
 
 type Candidato = { huellaId: string; stickerCodigo: string; posicion: number; dedo: string; ancho: number; alto: number; puntaje: number; coincide: boolean; persona: { id: string; nombre: string } | null };
@@ -366,6 +366,7 @@ function PorQr() {
             <p className="mt-4 text-xl font-bold">{r.firmaVerificada ? 'QR auténtico' : 'Código registrado'}</p>
             <p className="mt-1 text-sm text-ink-soft">{r.firmaVerificada ? 'La firma Ed25519 corresponde a TrazaGen.' : 'Código ingresado a mano: existe en el registro.'}</p>
             <p className="mt-4 font-mono text-2xl font-bold">{r.codigo}</p>
+            <div className="mt-2 flex justify-center">{r.anulado ? <span className="chip bg-red-100 text-red-700">Sticker anulado</span> : <ChipEstado estado={r.estado} />}</div>
             <Link to={`/stickers/${r.codigo}`} state={{ desdeQr: true, firmaVerificada: r.firmaVerificada }} className="btn-primary mt-6">
               Ver expediente <Icon.arrowRight className="h-4 w-4" />
             </Link>

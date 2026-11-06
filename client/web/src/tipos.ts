@@ -99,6 +99,7 @@ export type FichaSticker = {
     estado: string;
     creado: string;
     vinculadoEn: string | null;
+    anulado: { fecha: string; motivo: string | null } | null;
     lote: { id: string; codigo: string; fabrica: string; versionDiseno: string; fechaFabricacion: string };
     plantilla: { nombre: string; pais: string; posiciones: number[] };
   };
@@ -107,24 +108,19 @@ export type FichaSticker = {
   consentimientos: { id: string; versionTexto: string; fechaFirma: string; entidadRevisora: string; archivoNombre: string; archivoSha256: string; createdAt: string }[];
   toma: { fechaHora: string; lugar: string; operador: string; observaciones: string | null; dedosNoObtenibles: { posicion: number; dedo: string; motivo: string }[] } | null;
   huellas: HuellaFicha[];
-  muestra: {
-    codigo: string;
-    laboratorio: string;
-    estadoSello: string;
-    etapa: string;
-    etapaNombre: string;
-    etapaDesde: string;
-    adnUgMl: number | null;
-    kit: string | null;
-    loteKit: string | null;
-    equipos: string | null;
-    tubosAlmacenados: number | null;
-    materialRestante: boolean;
-    recibida: string;
+  laboratorio: {
+    enviado: string;
+    destino: string;
+    transportista: string | null;
+    sello: string | null;
+    responsable: string;
+    diasEsperando: number | null;
   } | null;
   perfil: {
     codigoMuestra: string;
     kit: string;
+    laboratorio: string | null;
+    materialRestante: boolean;
     formato: string;
     archivoNombre: string;
     archivoId: string | null;
@@ -163,19 +159,14 @@ export const DEDOS: Record<number, string> = {
   10: 'Meñique izquierdo',
 };
 
-export const ETAPAS_LAB = ['RECEPCION_LAB', 'EXTRACCION', 'CUANTIFICACION', 'AMPLIFICACION', 'ELECTROFORESIS', 'INTERPRETACION', 'PERFIL_CARGADO'];
 export const NOMBRE_ETAPA: Record<string, string> = {
   FABRICACION: 'Fabricación',
   TOMA: 'Toma de muestra',
   DIGITALIZACION_HUELLAS: 'Digitalización de huella',
   ENVIO: 'Envío al laboratorio',
-  RECEPCION_LAB: 'Recepción',
-  EXTRACCION: 'Extracción',
-  CUANTIFICACION: 'Cuantificación',
-  AMPLIFICACION: 'Amplificación',
-  ELECTROFORESIS: 'Electroforesis',
-  INTERPRETACION: 'Interpretación',
-  PERFIL_CARGADO: 'Perfil cargado',
+  PERFIL_CARGADO: 'Resultado del laboratorio',
   VINCULO_FIRMADO: 'Vínculo firmado',
   VERIFICACION: 'Verificación',
+  MATERIAL_AGOTADO: 'Material agotado',
+  ANULACION: 'Anulación',
 };

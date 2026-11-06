@@ -62,7 +62,7 @@ export function ResultadoIntegridad({ r }: { r: ResultadoVinculo }) {
 
 export default function VinculoTab({ f, recargar }: TabProps) {
   const { puede } = useSesion();
-  const firma = puede('ADMIN', 'LABORATORIO');
+  const firma = puede('ADMIN', 'LABORATORIO') && !f.sticker.anulado;
   const [cargando, setCargando] = useState<'' | 'firmar' | 'verificar'>('');
   const [error, setError] = useState('');
   const [resultado, setResultado] = useState<ResultadoVinculo | null>(null);

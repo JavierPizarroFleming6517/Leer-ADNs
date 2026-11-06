@@ -78,6 +78,17 @@ export default function Resumen({ f }: TabProps) {
           </p>
           {duplicados.length ? <p className="text-xs font-semibold text-red-700">Posible duplicado</p> : null}
         </Tarjeta>
+        <Tarjeta a={`${base}/perfil`} titulo="Laboratorio externo" icono={Icon.flask} ok={f.perfil ? true : f.laboratorio ? false : null}>
+          {f.laboratorio ? (
+            <>
+              <p className="font-semibold">{f.perfil ? 'Resultado recibido' : `Esperando resultado · ${f.laboratorio.diasEsperando ?? 0} d`}</p>
+              <p className="text-xs text-ink-mute">{f.laboratorio.destino}</p>
+              <p className="text-xs text-ink-mute">Enviado {fecha(f.laboratorio.enviado, false)}</p>
+            </>
+          ) : (
+            <p className="text-ink-mute">{f.toma && f.huellas.length ? 'Listo para enviar' : 'No enviado'}</p>
+          )}
+        </Tarjeta>
         <Tarjeta a={`${base}/perfil`} titulo="Perfil genético" icono={Icon.dna} ok={f.perfil ? f.perfil.resumen.completoCodis : null}>
           {f.perfil ? (
             <>
