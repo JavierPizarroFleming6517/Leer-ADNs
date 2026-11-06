@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, TipoEvento } from '@prisma/client';
 import { Ctx } from '../common/sesion';
 import { PrismaService } from '../prisma/prisma.service';
-import { GENESIS, hashEvento, verificarCadena } from './cadena';
+import { GENESIS, hashEvento, normalizarDetalle, verificarCadena } from './cadena';
 
 export const NOMBRE_EVENTO: Record<TipoEvento, string> = {
   FABRICACION: 'Fabricación',
@@ -47,7 +47,7 @@ export class CustodiaService {
       fecha: fecha.toISOString(),
       responsableId: p.ctx.usuario.id,
       responsableNombre: p.ctx.usuario.nombre,
-      detalle: JSON.parse(JSON.stringify(p.detalle ?? {})),
+      detalle: normalizarDetalle(JSON.parse(JSON.stringify(p.detalle ?? {}))),
       archivoSha256: p.archivoSha256 ?? null,
       hashAnterior: ultimo?.hashEvento ?? GENESIS,
     };

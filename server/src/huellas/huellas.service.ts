@@ -45,6 +45,8 @@ export class HuellasService {
       select: {
         id: true,
         posicion: true,
+        ancho: true,
+        alto: true,
         sticker: { select: { id: true, codigo: true, persona: { select: { id: true, nombres: true, apellidos: true } } } },
       },
     });
@@ -57,6 +59,8 @@ export class HuellasService {
         stickerCodigo: h.sticker.codigo,
         posicion: h.posicion,
         dedo: DEDOS[h.posicion],
+        ancho: h.ancho,
+        alto: h.alto,
         puntaje: t.score,
         coincide: t.match,
         persona: h.sticker.persona ? { id: h.sticker.persona.id, nombre: `${h.sticker.persona.nombres} ${h.sticker.persona.apellidos}` } : null,

@@ -38,7 +38,7 @@ export class AuditoriaService {
       ];
     }
     const [items, acciones] = await Promise.all([
-      this.prisma.auditoria.findMany({ where, orderBy: { fecha: 'desc' }, take: Math.min(f.limite ?? 200, 500) }),
+      this.prisma.auditoria.findMany({ where, orderBy: { fecha: 'desc' }, take: Math.min(f.limite ?? 100, 500) }),
       this.prisma.auditoria.groupBy({ by: ['accion'], _count: true, orderBy: { accion: 'asc' } }),
     ]);
     return { items, acciones: acciones.map((a) => ({ accion: a.accion, total: a._count })) };

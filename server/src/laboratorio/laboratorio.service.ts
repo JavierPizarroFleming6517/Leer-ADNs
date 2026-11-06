@@ -123,8 +123,8 @@ export class LaboratorioService {
         break;
       case 'CUANTIFICACION':
         req(dto.adnUgMl, 'Indica la cantidad de ADN (µg/ml).');
-        Object.assign(detalle, { adnUgMl: dto.adnUgMl, metodo: dto.metodo ?? null });
-        datos.adnUgMl = dto.adnUgMl;
+        Object.assign(detalle, { adnUgMl: Math.round(dto.adnUgMl! * 10000) / 10000, metodo: dto.metodo ?? null });
+        datos.adnUgMl = Math.round(dto.adnUgMl! * 10000) / 10000;
         break;
       case 'AMPLIFICACION': {
         req(dto.kit, 'Indica el kit de amplificación.');

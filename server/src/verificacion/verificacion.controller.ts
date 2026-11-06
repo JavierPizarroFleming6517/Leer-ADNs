@@ -57,7 +57,7 @@ export class VerificacionService {
       comparadas: r.candidatas,
       millis: r.millis,
       coincide: coincidencias.length > 0,
-      mejores: r.mejores.map(({ stickerId: _s, huellaId: _h, ...m }) => m),
+      mejores: r.mejores.map(({ stickerId: _s, ...m }) => m),
     };
   }
 

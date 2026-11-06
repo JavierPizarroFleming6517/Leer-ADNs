@@ -15,6 +15,19 @@ export type ContenidoEvento = {
   hashAnterior: string;
 };
 
+// Los números del detalle se limitan a 12 cifras significativas antes de calcular el hash y de guardar:
+// así el valor que vuelve de jsonb es idéntico al que se hasheó, en cualquier motor.
+export function normalizarDetalle(v: unknown): unknown {
+  if (typeof v === 'number') return Number.isFinite(v) ? Number(v.toPrecision(12)) : null;
+  if (Array.isArray(v)) return v.map(normalizarDetalle);
+  if (v && typeof v === 'object') {
+    const o: Record<string, unknown> = {};
+    for (const [k, x] of Object.entries(v)) if (x !== undefined) o[k] = normalizarDetalle(x);
+    return o;
+  }
+  return v;
+}
+
 export function hashEvento(c: ContenidoEvento): string {
   return sha256(jsonCanonico({ ...c, version: 'TrazaGen/Custodia/v1' }));
 }
