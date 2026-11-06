@@ -4,6 +4,11 @@ import { writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { SERVER, conAfis, correr, leerEnv, npm, npx, paso } from './comun.mjs';
+import { asegurarEnv } from './env.mjs';
+
+// Completa server/.env si le falta algo (p. ej. un JWT_SECRET corto de una versión anterior).
+const env = asegurarEnv();
+if (env.generados.length) console.log(`server/.env actualizado: ${env.generados.join(', ')}`);
 
 const url = process.env.DATABASE_URL || leerEnv().DATABASE_URL;
 if (!url) {
