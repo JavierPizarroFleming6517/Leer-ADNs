@@ -2,6 +2,8 @@
 
 Recorre todo el flujo con los archivos de `examples/demo/`. Sigue el mismo orden que el guion del video y agrega algunas pruebas de error («esto debe fallar») que muestran la seguridad.
 
+**Cómo funciona el laboratorio en esta versión:** el laboratorio es **externo** a TrazaGen. La plataforma registra a qué laboratorio se envió el sticker y recibe el resultado (el archivo con el perfil STR). No registra los procesos internos del laboratorio.
+
 **Antes de empezar**
 
 ```bash
@@ -12,177 +14,119 @@ npm run demo:reset
 npm run dev
 ```
 
-Abre http://localhost:5173. La contraseña de los 4 usuarios está en `server/.env`:
+Abre http://localhost:5173 y entra como **Camila Rojas** (administración). La contraseña está en `server/.env`:
 
 ```bash
 grep DEMO_PASSWORD server/.env
 ```
 
-Para cambiar de usuario: ícono de salida arriba a la derecha → en el login, clic en otra persona de «Usuarios de demostración».
-
-| Usuario | Rol |
-| --- | --- |
-| Camila Rojas | Administración |
-| Diego Fuentes | Operador de toma |
-| Dra. Valentina Soto | Laboratorio |
-| Andrés Muñoz | Verificador |
-
 ---
 
-## 1. Administración: Inicio y alertas · *Camila Rojas*
+## 1. Inicio y alertas
 
-1. Entra como **Camila Rojas**.
-2. Arriba a la derecha deben estar en verde **API**, **Base de datos** y **Motor biométrico**.
-3. En **Inicio** revisa:
-   - Las tarjetas: 10 personas, 8 vínculos firmados, 39 huellas y las búsquedas del mes.
-   - **Alertas**: «Posible huella duplicada», «2 intentos de QR falso» y «Sello dañado al recibir».
-   - **Stickers por estado**: 30 nuevos, 1 procesado, 7 en uso y 2 finalizados.
-4. Clic en la alerta **Posible huella duplicada** → pestaña **Huellas** del sticker. El dedo en rojo coincide con el de **Matías Herrera Lagos**, con un puntaje ≈ 370 de SourceAFIS. Clic en el dedo para ver la imagen y las minucias.
-5. Pestaña **Laboratorio** del mismo sticker: la recepción quedó registrada con **sello dañado**.
+1. Arriba a la derecha deben estar en verde **API**, **Base de datos** y **Motor biométrico**. Si el motor biométrico se cae, aparece una franja roja «Motor biométrico no disponible».
+2. En **Inicio** revisa:
+   - Las tarjetas: 10 personas, 8 vínculos firmados, 39 huellas y las verificaciones del mes.
+   - **Alertas**: «Posible huella duplicada» y «2 intentos de QR falso».
+   - **Stickers por estado**: 30 nuevos, 2 procesados, 6 en uso y 2 finalizados.
+   - **En el laboratorio externo**: 2 stickers enviados que esperan su resultado, con los días de espera.
+3. Clic en la alerta **Posible huella duplicada** → pestaña **Huellas** del sticker. El dedo en rojo coincide con el de **Matías Herrera Lagos**, con un puntaje ≈ 370 de SourceAFIS.
 
-✅ **Esperado:** alertas reales calculadas desde la base, no textos fijos.
+## 2. Crear un lote e imprimir etiquetas
 
-## 2. Crear un lote e imprimir etiquetas · *Camila Rojas*
-
-1. Menú **Stickers y lotes** → **Crear lote**.
+1. **Stickers y lotes** → **Crear lote**.
 2. Plantilla **«Internacional — 5 dedos (mano derecha)»**, cantidad **5** → **Generar lote**.
-3. Se abre la grilla de etiquetas QR:
-   - **Imprimir / Guardar PDF**: guarda el PDF.
-   - **CSV para la fábrica**: descarga el código y la URL firmada de cada sticker.
-4. **Guarda la imagen de un QR** para el paso siguiente: clic derecho sobre el primer QR → «Guardar imagen como…» (por ejemplo `~/Descargas/qr1.png`). Anota también su código `TG-XXXX-XXXX`.
+3. En la grilla de etiquetas QR prueba **Imprimir / Guardar PDF** y **CSV para la fábrica**.
+4. **Guarda la imagen de un QR** para el paso siguiente: clic derecho sobre el primer QR → «Guardar imagen como…».
 
-✅ **Esperado:** 5 stickers con código aleatorio en formato Crockford base32 (sin I, L, O ni U).
+## 3. Toma de muestra y envío al laboratorio
 
-## 3. Toma de muestra · *Diego Fuentes*
+### 3.1 Verificar el QR
+1. **Verificación** → **Por QR** → sube la foto del QR guardado. También sirve la cámara, o pegar el código o la URL del QR.
+2. Aparece **«QR auténtico»** → **Ver expediente**. La ficha muestra «QR auténtico: firma Ed25519 verificada» y la barra del ciclo de vida en **Nuevo**.
 
-### 3.1 Escanear
-1. Sal y entra como **Diego Fuentes** (operador).
-2. Menú **Escanear** → en **Foto del QR** sube `qr1.png`. También sirve la cámara («Activar cámara») apuntando al QR en otra pantalla, o escribir el código en «Código manual».
-3. Se abre la ficha del sticker con el aviso verde **«QR auténtico: firma Ed25519 verificada»**. Si escribiste el código a mano, el aviso dice «Código encontrado en el registro» (sin firma que verificar).
+### 3.2 Persona y consentimiento
+1. **Iniciar toma** → **Persona nueva**. Datos ficticios, por ejemplo: Martina · Olivares Reyes · PASAPORTE · F7734120 · Chile · Chilena · 1996-06-18 · Femenino.
+2. **Asociar al sticker**.
+3. En **Consentimiento informado**, sube `examples/demo/consentimiento_firmado.pdf`.
 
-### 3.2 Asociar persona y consentimiento
-1. Botón **Iniciar toma** → pestaña **Persona y consentimiento**, en modo **Persona nueva**.
-2. Completa con datos ficticios, por ejemplo: Martina · Olivares Reyes · PASAPORTE · F7734120 · Chile · Chilena · 1996-06-18 · Femenino.
-3. **Asociar al sticker**. La ficha muestra el aviso «Datos sensibles cifrados» y, como operador, ves el documento **enmascarado**.
-4. En **Consentimiento informado**, sube `examples/demo/consentimiento_firmado.pdf`. Aparece «Consentimiento guardado» con su SHA-256.
+🔴 **Prueba de error:** en otro sticker nuevo intenta crear una persona con el **mismo documento**. Debe rechazarse: «Ya existe una persona registrada con ese documento». La búsqueda usa el índice ciego, sin descifrar.
 
-🔴 **Prueba de error:** en otra ficha nueva, intenta crear una persona con el **mismo documento** (PASAPORTE F7734120, Chile). Debe rechazarse: «Ya existe una persona registrada con ese documento». La búsqueda usa el índice ciego, sin descifrar.
+### 3.3 Toma y huellas
+1. Pestaña **Toma** → **Registrar toma**.
+2. Pestaña **Huellas**, origen Escáner, **DPI 500**:
+   - Casilla **2 (índice derecho)** → `examples/demo/toma/dedo_nuevo_indice_derecho.png` → ✅ «sin duplicados», con las minucias dibujadas.
+   - Casilla **3 (medio derecho)** → `examples/demo/toma/dedo_repetido.png` → 🔴 alerta: coincide con el pulgar derecho de **Matías Herrera Lagos** (≈ 242).
+3. El sticker pasa a **Procesado**.
 
-### 3.3 Toma
-1. Pestaña **Toma** → deja lugar y fecha (puedes marcar un dedo como «no obtenible» con un motivo) → **Registrar toma**.
-2. (Opcional) En la misma pestaña, **Registrar envío** al laboratorio.
+🔴 **Prueba de error:** vuelve a subir una imagen a la casilla 2: «ya tiene una huella registrada. Las huellas no se reemplazan».
 
-### 3.4 Huellas
-1. Pestaña **Huellas**. Origen **Escáner**, **DPI 500**.
-2. Clic en la casilla **2 (índice derecho)** → elige `examples/demo/toma/dedo_nuevo_indice_derecho.png`.
-   - ✅ Aviso verde: «Índice derecho: N minucias extraídas · sin duplicados», comparada 1:N contra las demás huellas.
-   - A la derecha se ve la imagen con las **minucias dibujadas** (círculo = terminación, cuadrado = bifurcación). Prueba el checkbox «Minucias».
-3. Clic en la casilla **3 (medio derecho)** → elige `examples/demo/toma/dedo_repetido.png`.
-   - 🔴 **Alerta roja:** «Medio derecho coincide con una huella de otro sticker» → Pulgar derecho de **Matías Herrera Lagos**, puntaje ≈ 242.
-4. El sticker pasa a estado **Procesado** (barra del ciclo de vida).
+### 3.4 Envío al laboratorio externo
+1. Pestaña **Laboratorio y perfil** → completa destino, transportista y sello → **Registrar envío**.
+2. El circuito queda en «Enviado al laboratorio» → «Resultado recibido: Esperando · 0 días». El sticker aparece en el Inicio, en «En el laboratorio externo».
 
-🔴 **Prueba de error:** vuelve a subir una imagen a la casilla 2. Debe rechazarse: «ya tiene una huella registrada. Las huellas no se reemplazan».
+## 4. Resultado del laboratorio
 
-## 4. Laboratorio · *Dra. Valentina Soto*
+Este sticker nuevo no tiene un archivo de resultado de ejemplo (el `SPECIMENID` debe ser su código). Para el guion se usa el sticker sembrado que ya está esperando su perfil:
 
-1. Sal y entra como **Dra. Valentina Soto**.
-2. Menú **Laboratorio** → en la columna **Cuantificación**, abre la muestra **M-000009**.
-3. Pestaña **Perfil genético**: sube `examples/demo/perfil_sticker_en_lab.xml` **antes** de registrar las etapas.
-   - 🔴 Debe pedir: «Registra primero todas las etapas del laboratorio, hasta la interpretación».
-4. Pestaña **Laboratorio**: registra en orden
-   - **Amplificación**: kit **GlobalFiler** → «Registrar amplificación».
-   - **Electroforesis** → «Registrar electroforesis».
-   - **Interpretación** → «Registrar interpretación».
-   - Cada etapa aparece en la línea de la izquierda con fecha y responsable.
-5. (Opcional) **Adjuntar archivo**: sube cualquier archivo (por ejemplo un PDF). Queda listado como «almacenado, no interpretado», con su SHA-256.
-6. Pestaña **Perfil genético**:
-   - Sube `examples/demo/perfil_otra_muestra.xml` → 🔴 **Archivo rechazado**: «El archivo corresponde a otra muestra. Contiene M-000431; se esperaba M-000009».
-   - Sube `examples/demo/perfil_sticker_en_lab.xml` → ✅ **Perfil aceptado · 20/20 CODIS · muestra M-000009**, «Sin coincidencias en el registro». Abajo aparece la grilla de alelos ordenada.
+1. **Inicio** → «En el laboratorio externo» → abre el sticker que lleva **más días** esperando (el que no tiene huella duplicada).
+2. Sube `examples/demo/perfil_otra_muestra.xml` → 🔴 **Archivo rechazado**: «El archivo corresponde a otra muestra. Contiene TG-9Q4M-2XKD; se esperaba TG-…, el código de este sticker».
+3. Sube `examples/demo/perfil_sticker_en_lab.xml` → ✅ **Perfil aceptado · 20/20 CODIS**, «Sin coincidencias en el registro». El sticker pasa a **En uso** (llegó el perfil y queda material).
+4. (Opcional) **Adjuntar archivo**: sube cualquier PDF como informe del laboratorio; queda «almacenado, no interpretado», con su SHA-256.
+5. (Opcional) **«El laboratorio informa material agotado»** → el sticker pasa a **Finalizado**.
 
-## 5. Vínculo y custodia · *Dra. Valentina Soto*
+## 5. Vínculo y custodia
 
-1. Pestaña **Vínculo** → **Firmar vínculo**.
-2. **Verificar integridad** → ✅ **«✓ Vínculo íntegro»**, con todas las comprobaciones en verde. Revisa el documento canónico, la firma y la llave pública.
-3. Pestaña **Custodia** → **Verificar cadena** → ✅ **«✓ Cadena íntegra · N eventos»**. Cada evento muestra su hash y el del anterior.
+1. Pestaña **Vínculo** → **Firmar vínculo** → **Verificar integridad** → ✅ «✓ Vínculo íntegro».
+2. Pestaña **Custodia** → **Verificar cadena** → ✅ «✓ Cadena íntegra». Se ven el envío y el resultado del laboratorio como eventos encadenados.
 
-## 6. Verificación · *Andrés Muñoz*
+## 6. Verificación
 
-1. Sal y entra como **Andrés Muñoz** (verificador).
-2. Menú **Verificación** → **Por huella**, DPI **500**:
-   - Sube `examples/demo/huella_para_verificar.png` → ✅ **«Coincide con Valeria Andrea Contreras Ibáñez»**, meñique derecho, puntaje ≈ 166. Se ven la huella consultada con sus minucias, la registrada y los 5 puntajes más altos con la línea del umbral (40).
-   - Sube `examples/demo/huella_desconocida.png` → **«Sin coincidencias»**, con el puntaje más alto bajo 40.
-3. **Por perfil genético** → `examples/demo/perfil_persona_registrada.xml` → ✅ **«Coincide con Camila Andrea Vargas Peña»**.
-4. **Por QR** → escribe un código de sticker → «Código registrado» y el botón «Ver expediente».
-5. **Datos por rol**: abre ese expediente → pestaña **Perfil genético** → el verificador ve solo el resumen: «Tu rol ve el resumen del perfil, no los alelos».
+1. **Verificación** → **Por huella**, DPI 500:
+   - `examples/demo/huella_para_verificar.png` → ✅ «Coincide con Valeria Andrea Contreras Ibáñez», meñique derecho, puntaje ≈ 166.
+   - `examples/demo/huella_desconocida.png` → «Sin coincidencias».
+2. **Por perfil genético** → `examples/demo/perfil_persona_registrada.xml` → ✅ «Coincide con Camila Andrea Vargas Peña».
 
-## 7. Alteración directa en la base · *terminal + Camila Rojas*
-
-1. En una terminal (con `npm run dev` corriendo en otra):
+## 7. Alteración directa en la base
 
 ```bash
 npm run demo:alterar
 ```
 
-   Imprime la persona (**Matías Ignacio Herrera Lagos**), su sticker y el cambio (D8S1179: 12, 15 → 12, 16).
+Abre el sticker de **Matías Herrera Lagos** (Personas → «Matías») → **Vínculo** → **Verificar integridad** → 🔴 «✗ Vínculo alterado», con el **locus D8S1179** en la tabla «Qué cambió». El Inicio muestra «Vínculo con integridad alterada».
 
-2. Entra como **Camila Rojas** → **Personas** → busca «Matías» → clic en su sticker → pestaña **Vínculo** → **Verificar integridad**.
-   - 🔴 **«✗ Vínculo alterado»**: falla «Perfil genético» y la tabla «Qué cambió» muestra el **locus D8S1179**, el valor del archivo del laboratorio y el valor que hay hoy en la base.
-3. **Inicio** → nueva alerta «Vínculo con integridad alterada».
-
-🔴 **Prueba extra: la custodia no se puede editar ni desde la base.**
+🔴 **La custodia no se puede editar ni borrar desde la base:**
 
 ```bash
 psql postgresql://trazagen:trazagen@localhost:5432/trazagen -c "UPDATE \"EventoCustodia\" SET \"responsableNombre\" = 'otro';"
 ```
 
-Debe responder: `ERROR: La cadena de custodia es de solo inserción: UPDATE no está permitido sobre EventoCustodia`. Lo mismo con `DELETE`.
+Debe responder `ERROR: La cadena de custodia es de solo inserción`. Lo mismo con `DELETE` sobre cualquier sticker que se haya usado.
 
-## 8. QR falso y vista desde el celular
+## 8. Eliminar y anular
 
-### QR falso
-En el navegador abre una URL con firma inventada:
+1. **Stickers y lotes** → un sticker **Nuevo** → **Eliminar**: se borra (nunca se usó).
+2. El sticker con la huella duplicada → **Anular** → escribe el motivo → queda **Anulado**: no se borra, su custodia sigue íntegra (con un evento «Anulación del sticker»), su vínculo se revoca y deja de aparecer en las búsquedas y alertas.
+3. En **Lotes**, «Eliminar» solo se habilita en un lote sin ningún sticker usado.
+
+## 9. QR falso y celular
 
 ```
 http://localhost:5173/s/TG-ABCD-EFGH.AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 ```
 
-🔴 Pantalla roja **«Código no emitido por TrazaGen»**. El intento queda en **Auditoría** (como admin, filtra por «QR falso o no emitido»).
+🔴 Pantalla roja **«Código no emitido por TrazaGen»**; el intento queda en **Auditoría**.
 
-### Celular en la misma red Wi-Fi
-1. IP del computador:
-
-```bash
-hostname -I
-```
-
-2. En `server/.env`: `APP_URL=http://TU-IP:5173`. Reinicia `npm run dev` (Ctrl+C y de nuevo).
-3. Abre el puerto en el firewall de Fedora (solo hasta reiniciar):
-
-```bash
-sudo firewall-cmd --add-port=5173/tcp
-```
-
-4. Abre la ficha de una persona registrada → clic en su QR (arriba a la izquierda) → escanéalo con la **cámara del teléfono** → inicia sesión → expediente adaptado a la pantalla del celular.
-   - Como **verificador**: no ve los alelos.
-   - Como **laboratorio**: no ve el número de documento («Oculto para tu rol»).
-
-## 9. Otras pantallas (como admin)
-
-- **Custodia**: buscador global por código de sticker, responsable o prefijo de hash.
-- **Auditoría**: inicios de sesión, consultas, perfiles rechazados, QR falsos e intentos fallidos (en rojo), con IP.
-- **Administración**: usuarios (crear o desactivar), plantillas de sticker por país y kits con sus loci.
-- **Personas**: el admin ve el documento completo; el operador y el verificador lo ven enmascarado.
+Para el celular en la misma Wi-Fi: `hostname -I` → en `server/.env` pon `APP_URL=http://TU-IP:5173` → reinicia `npm run dev` → `sudo firewall-cmd --add-port=5173/tcp` (Fedora) → escanea el QR de una ficha con la cámara del teléfono.
 
 ## Al terminar
-
-Para dejar todo como nuevo (incluido lo alterado):
 
 ```bash
 npm run demo:reset
 ```
 
-`datasets/asignacion.json` cambia en cada reset (códigos de sticker nuevos). Puedes descartar el cambio:
+`datasets/asignacion.json` y `examples/demo/perfil_sticker_en_lab.xml` cambian en cada reset (códigos de sticker nuevos). Puedes descartarlos:
 
 ```bash
-git checkout datasets/asignacion.json
+git checkout datasets/asignacion.json examples/demo/perfil_sticker_en_lab.xml
 ```

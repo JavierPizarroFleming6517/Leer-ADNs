@@ -1,5 +1,20 @@
 # Decisiones y limitaciones conocidas
 
+## Rama `laboratorio-externo` (sobre `simplificar`)
+
+Se mantuvo la simplificación de `simplificar` (un solo usuario de administración, Escanear dentro de Verificación, Inicio más limpio, marca TrazaGen, eliminación de lotes de prueba) y se corrigió lo que había quedado roto o en contra de los requisitos:
+
+- **Laboratorio externo.** El laboratorio no es parte de TrazaGen: la plataforma registra el **envío** del sticker (destino, transportista, sello) y recibe el **resultado** (perfil STR con su archivo original y su SHA-256). Se eliminaron la tabla `MuestraBiologica`, el correlativo `M-` y las etapas internas (recepción, extracción, cuantificación, amplificación, electroforesis, interpretación). En `simplificar` se había quitado la pantalla, pero el servidor seguía exigiendo esas etapas para aceptar un perfil, así que ningún sticker nuevo podía llegar a firmar su vínculo.
+- **Validación de custodia del resultado.** El `SPECIMENID` (o nombre de muestra) del archivo debe ser el **código del sticker**. El kit lo declara quien carga el resultado y se validan los loci contra él.
+- **Ciclo de vida.** Se mantienen los cuatro estados del documento de la genetista, derivados de los hechos: Procesado (toma y al menos una huella), En uso (llegó el perfil y el laboratorio informa que queda material), Finalizado (el laboratorio informa material agotado; evento `MATERIAL_AGOTADO`).
+- **Custodia inviolable otra vez.** `simplificar` agregaba al trigger una excepción activable con `SET trazagen.borrar_lote = '1'`: cualquiera con acceso a la base podía borrar toda la custodia (se comprobó). Una migración nueva la reemplaza. La única excepción la verifica la propia base: el evento de fabricación de un sticker sin uso (estado NUEVO, sin persona, sin anular y sin otros eventos). `UPDATE` y `TRUNCATE` se rechazan siempre. Hay pruebas automáticas para los dos casos.
+- **Eliminar vs. anular.** Solo se eliminan lotes y stickers sin uso. Un sticker con datos se **anula**: evento `ANULACION` con motivo, vínculo vigente revocado, solo lectura, y fuera de las búsquedas 1:N, la comparación de perfiles y las alertas.
+- **Detalles recuperados.** Indicador de servicios (API, base de datos, motor biométrico) con el aviso «Motor biométrico no disponible», barra del ciclo de vida en la ficha y estados en la lista de stickers.
+- **Roles.** Los permisos por rol siguen revisándose en el servidor, pero la demo usa solo el usuario de administración, como decidió `simplificar`. Los demás usuarios quedan sembrados e inactivos (aparecen como responsables de eventos históricos).
+- **Archivos de ejemplo.** Como el `SPECIMENID` es el código del sticker (aleatorio), `examples/demo/perfil_sticker_en_lab.xml` lo reescribe cada siembra, igual que `datasets/asignacion.json`.
+
+## Versión original (`trazagen-demo`)
+
 Registro de lo que se decidió durante la construcción de la demo de TrazaGen y que el documento de requisitos no cubría.
 
 ## Arquitectura

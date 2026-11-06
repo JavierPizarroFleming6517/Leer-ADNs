@@ -55,7 +55,8 @@ async function sesion(email, opciones = escritorio) {
   const p = await ctx.newPage();
   p.on('pageerror', (e) => console.error('  ! Error de página:', e.message));
   await p.goto(`${BASE}/login`);
-  await p.getByTestId('usuarios-demo').locator('button', { hasText: email.startsWith('admin') ? 'Camila' : email.startsWith('operador') ? 'Diego' : email.startsWith('lab') ? 'Valentina' : 'Andrés' }).click();
+  await p.getByTestId('usuarios-demo').locator('button', { hasText: 'Camila' }).click();
+  if (email) await p.fill('#email', email);
   await p.fill('#password', PASSWORD);
   await p.click('button[type=submit]');
   await p.waitForURL((u) => !u.pathname.startsWith('/login'));
@@ -65,14 +66,15 @@ const tab = (p, id) => p.getByTestId(`tab-${id}`).click();
 
 try {
   // ---------------------------------------------------------------- 1
-  paso('1. Login como Admin → Inicio con alerta de huella duplicada');
+  paso('1. Login → Inicio con alerta de huella duplicada');
   const anon = await (await navegador.newContext(escritorio)).newPage();
   await anon.goto(`${BASE}/login`);
   await anon.getByTestId('usuarios-demo').waitFor();
   await captura(anon, 'login');
   const admin = await sesion('admin@trazagen.cl');
   await admin.getByText('Posible huella duplicada').first().waitFor();
-  await captura(admin, 'inicio_admin_alerta_duplicado', true);
+  await admin.getByTestId('esperando-laboratorio').first().waitFor();
+  await captura(admin, 'inicio_alertas_y_laboratorio', true);
 
   // ---------------------------------------------------------------- 2
   paso('2. Crear un lote de 5 stickers → imprimir etiquetas QR');
@@ -86,21 +88,22 @@ try {
   await admin.getByTestId('etiqueta').nth(4).locator('img').waitFor();
   await captura(admin, 'etiquetas_qr_imprimibles');
   const urlQr = await admin.getByTestId('etiqueta').first().getAttribute('data-url');
+  const urlQrSinUso = await admin.getByTestId('etiqueta').nth(4).getAttribute('data-url');
   const codigoNuevo = urlQr.match(/TG-[0-9A-Z]{4}-[0-9A-Z]{4}/)[0];
+  const codigoSinUso = urlQrSinUso.match(/TG-[0-9A-Z]{4}-[0-9A-Z]{4}/)[0];
   console.log(`  Sticker nuevo: ${codigoNuevo}`);
 
   // ---------------------------------------------------------------- 3
-  paso('3. Operador: escanear → asociar persona → consentimiento → toma → huellas → duplicado');
-  const op = await sesion('operador@trazagen.cl');
-  await op.goto(`${BASE}/verificacion?modo=qr`);
-  await op.getByTestId('codigo-manual').fill(urlQr);
-  await captura(op, 'escanear_qr');
-  await op.getByRole('button', { name: 'Verificar' }).click();
-  await op.getByRole('link', { name: 'Ver expediente' }).click();
-  await op.getByText('QR auténtico: firma Ed25519 verificada').waitFor();
-  await captura(op, 'ficha_sticker_nuevo_qr_verificado');
-  await op.getByTestId('iniciar-toma').click();
-  const f = op.getByTestId('form-persona');
+  paso('3. Verificar QR → asociar persona → consentimiento → toma → huellas → duplicado → envío al laboratorio');
+  await admin.goto(`${BASE}/verificacion?modo=qr`);
+  await admin.getByTestId('codigo-manual').fill(urlQr);
+  await captura(admin, 'verificar_qr');
+  await admin.getByRole('button', { name: 'Verificar' }).click();
+  await admin.getByRole('link', { name: 'Ver expediente' }).click();
+  await admin.getByText('QR auténtico: firma Ed25519 verificada').waitFor();
+  await captura(admin, 'ficha_sticker_nuevo_qr_verificado');
+  await admin.getByTestId('iniciar-toma').click();
+  const f = admin.getByTestId('form-persona');
   await f.locator('[name=nombres]').fill('Martina');
   await f.locator('[name=apellidos]').fill('Olivares Reyes');
   await f.locator('[name=tipoDocumento]').selectOption('PASAPORTE');
@@ -110,79 +113,75 @@ try {
   await f.locator('[name=fechaNacimiento]').fill('1996-06-18');
   await f.locator('[name=sexoDeclarado]').selectOption('Femenino');
   await f.locator('[name=institucion]').fill('Universidad de Chile');
-  await captura(op, 'asociar_persona');
-  await op.getByTestId('guardar-persona').click();
-  await op.getByText('Datos sensibles cifrados').waitFor();
-  await op.getByTestId('subir-consentimiento').setInputFiles(join(DEMO, 'consentimiento_firmado.pdf'));
-  await op.getByText('Consentimiento guardado').waitFor();
-  await captura(op, 'persona_y_consentimiento');
-  await tab(op, 'toma');
-  await op.getByTestId('guardar-toma').click();
-  await op.getByText('Registrada').waitFor();
-  await captura(op, 'toma_registrada');
-  await tab(op, 'huellas');
-  await op.getByTestId('input-dedo-2').setInputFiles(join(DEMO, 'toma', 'dedo_nuevo_indice_derecho.png'));
-  await op.getByText('sin duplicados').waitFor({ timeout: 30000 });
-  await op.getByTestId('detalle-huella').locator('img').waitFor();
-  await captura(op, 'huella_cargada_minucias');
-  await op.getByTestId('input-dedo-3').setInputFiles(join(DEMO, 'toma', 'dedo_repetido.png'));
-  await op.getByText('coincide con una huella de otro sticker').waitFor({ timeout: 30000 });
-  await captura(op, 'alerta_huella_duplicada');
+  await captura(admin, 'asociar_persona');
+  await admin.getByTestId('guardar-persona').click();
+  await admin.getByText('Datos sensibles cifrados').waitFor();
+  await admin.getByTestId('subir-consentimiento').setInputFiles(join(DEMO, 'consentimiento_firmado.pdf'));
+  await admin.getByText('Consentimiento guardado').waitFor();
+  await captura(admin, 'persona_y_consentimiento');
+  await tab(admin, 'toma');
+  await admin.getByTestId('guardar-toma').click();
+  await admin.getByText('Registrada').waitFor();
+  await captura(admin, 'toma_registrada');
+  await tab(admin, 'huellas');
+  await admin.getByTestId('input-dedo-2').setInputFiles(join(DEMO, 'toma', 'dedo_nuevo_indice_derecho.png'));
+  await admin.getByText('sin duplicados').waitFor({ timeout: 30000 });
+  await admin.getByTestId('detalle-huella').locator('img').waitFor();
+  await captura(admin, 'huella_cargada_minucias');
+  await admin.getByTestId('input-dedo-3').setInputFiles(join(DEMO, 'toma', 'dedo_repetido.png'));
+  await admin.getByText('coincide con una huella de otro sticker').waitFor({ timeout: 30000 });
+  await captura(admin, 'alerta_huella_duplicada');
+  await tab(admin, 'perfil');
+  await admin.getByTestId('form-envio').waitFor();
+  await captura(admin, 'envio_al_laboratorio');
+  await admin.getByTestId('registrar-envio').click();
+  await admin.getByTestId('subir-perfil').waitFor({ state: 'attached' });
+  await admin.getByText('Esperando · 0 días').waitFor();
+  await captura(admin, 'esperando_resultado_laboratorio');
 
   // ---------------------------------------------------------------- 4
-  paso('4. Laboratorio: etapas → perfil de otra muestra (rechazado) → perfil correcto (aceptado)');
-  const lab = await sesion('laboratorio@genlab.cl');
-  const muestraLab = asignacion.stickers.enLaboratorioGuion.muestra;
-  await lab.goto(`${BASE}/laboratorio`);
-  await lab.getByTestId('muestra-bandeja').filter({ hasText: muestraLab }).waitFor();
-  await captura(lab, 'bandeja_laboratorio');
-  await lab.getByTestId('muestra-bandeja').filter({ hasText: muestraLab }).click();
-  for (const etapa of ['AMPLIFICACION', 'ELECTROFORESIS', 'INTERPRETACION']) {
-    await lab.getByTestId(`form-etapa-${etapa}`).waitFor();
-    if (etapa === 'AMPLIFICACION') await captura(lab, 'registrar_etapa_amplificacion');
-    await lab.getByTestId(`form-etapa-${etapa}`).getByTestId('registrar-etapa').click();
-  }
-  await lab.getByText('Etapas completas').waitFor();
-  await captura(lab, 'etapas_laboratorio_completas', true);
-  await tab(lab, 'perfil');
-  await lab.getByTestId('subir-perfil').setInputFiles(join(DEMO, 'perfil_otra_muestra.xml'));
-  await lab.getByTestId('perfil-rechazado').waitFor();
-  await lab.getByText('El archivo corresponde a otra muestra').waitFor();
-  await captura(lab, 'perfil_rechazado_otra_muestra');
-  await lab.getByTestId('subir-perfil').setInputFiles(join(DEMO, 'perfil_sticker_en_lab.xml'));
-  await lab.getByTestId('perfil-aceptado').waitFor();
-  await lab.getByText('Sin coincidencias en el registro').waitFor();
-  await lab.getByText('20/20 CODIS').first().waitFor();
-  await captura(lab, 'perfil_aceptado_20_de_20', true);
+  paso('4. Resultado del laboratorio externo: archivo de otra muestra (rechazado) → archivo correcto (aceptado)');
+  const codigoLab = asignacion.stickers.enLaboratorioGuion.codigo;
+  await admin.goto(`${BASE}/`);
+  await admin.getByTestId('esperando-laboratorio').filter({ hasText: codigoLab }).click();
+  await admin.getByTestId('subir-perfil').waitFor({ state: 'attached' });
+  await admin.getByTestId('subir-perfil').setInputFiles(join(DEMO, 'perfil_otra_muestra.xml'));
+  await admin.getByTestId('perfil-rechazado').waitFor();
+  await admin.getByText('El archivo corresponde a otra muestra').waitFor();
+  await captura(admin, 'perfil_rechazado_otra_muestra');
+  await admin.getByTestId('subir-perfil').setInputFiles(join(DEMO, 'perfil_sticker_en_lab.xml'));
+  await admin.getByTestId('perfil-aceptado').waitFor();
+  await admin.getByText('Sin coincidencias en el registro').waitFor();
+  await admin.getByText('20/20 CODIS').first().waitFor();
+  await captura(admin, 'perfil_aceptado_20_de_20', true);
 
   // ---------------------------------------------------------------- 5
   paso('5. Firmar vínculo → Verificar integridad ✓ → Verificar cadena ✓');
-  await tab(lab, 'vinculo');
-  await lab.getByTestId('firmar-vinculo').click();
-  await lab.getByTestId('verificar-integridad').click();
-  await lab.getByTestId('integridad-ok').waitFor();
-  await captura(lab, 'vinculo_firmado_integridad_ok', true);
-  await tab(lab, 'custodia');
-  await lab.getByTestId('verificar-cadena').click();
-  await lab.getByTestId('cadena-ok').waitFor();
-  await captura(lab, 'custodia_cadena_integra', true);
+  await tab(admin, 'vinculo');
+  await admin.getByTestId('firmar-vinculo').click();
+  await admin.getByTestId('verificar-integridad').click();
+  await admin.getByTestId('integridad-ok').waitFor();
+  await captura(admin, 'vinculo_firmado_integridad_ok', true);
+  await tab(admin, 'custodia');
+  await admin.getByTestId('verificar-cadena').click();
+  await admin.getByTestId('cadena-ok').waitFor();
+  await captura(admin, 'custodia_cadena_integra', true);
 
   // ---------------------------------------------------------------- 6
   paso('6. Verificación por huella (coincide y sin coincidencias) y por perfil');
-  const ver = await sesion('verificador@trazagen.cl');
-  await ver.goto(`${BASE}/verificacion`);
-  await ver.getByTestId('subir-huella-verificar').setInputFiles(join(DEMO, 'huella_para_verificar.png'));
-  await ver.getByTestId('resultado-coincide').waitFor({ timeout: 30000 });
+  await admin.goto(`${BASE}/verificacion`);
+  await admin.getByTestId('subir-huella-verificar').setInputFiles(join(DEMO, 'huella_para_verificar.png'));
+  await admin.getByTestId('resultado-coincide').waitFor({ timeout: 30000 });
   const esperado = asignacion.archivosDemo['huella_para_verificar.png'].dueño.persona;
-  await ver.getByText(`Coincide con ${esperado}`).waitFor();
-  await captura(ver, 'verificacion_huella_coincide', true);
-  await ver.getByTestId('subir-huella-verificar').setInputFiles(join(DEMO, 'huella_desconocida.png'));
-  await ver.getByTestId('resultado-sin-coincidencias').waitFor({ timeout: 30000 });
-  await captura(ver, 'verificacion_huella_sin_coincidencias', true);
-  await ver.getByTestId('modo-perfil').click();
-  await ver.getByTestId('subir-perfil-verificar').setInputFiles(join(DEMO, 'perfil_persona_registrada.xml'));
-  await ver.getByTestId('perfil-coincide').waitFor();
-  await captura(ver, 'verificacion_perfil_coincide');
+  await admin.getByText(`Coincide con ${esperado}`).waitFor();
+  await captura(admin, 'verificacion_huella_coincide', true);
+  await admin.getByTestId('subir-huella-verificar').setInputFiles(join(DEMO, 'huella_desconocida.png'));
+  await admin.getByTestId('resultado-sin-coincidencias').waitFor({ timeout: 30000 });
+  await captura(admin, 'verificacion_huella_sin_coincidencias', true);
+  await admin.getByTestId('modo-perfil').click();
+  await admin.getByTestId('subir-perfil-verificar').setInputFiles(join(DEMO, 'perfil_persona_registrada.xml'));
+  await admin.getByTestId('perfil-coincide').waitFor();
+  await captura(admin, 'verificacion_perfil_coincide');
 
   // ---------------------------------------------------------------- 7
   paso('7. npm run demo:alterar → Verificar integridad ✗');
@@ -199,28 +198,44 @@ try {
   await captura(admin, 'inicio_alerta_vinculo_alterado');
 
   // ---------------------------------------------------------------- 8
-  paso('8. Escanear desde el celular el QR de una persona registrada → expediente según rol');
+  paso('8. Escanear desde el celular el QR de una persona registrada → expediente; QR falso');
   const codigoRegistrado = asignacion.archivosDemo['perfil_persona_registrada.xml'].sticker;
-  const tok = await (await fetch(`${BASE}/api/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'verificador@trazagen.cl', password: PASSWORD }) })).json();
+  const tok = await (await fetch(`${BASE}/api/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'admin@trazagen.cl', password: PASSWORD }) })).json();
   const ficha = await (await fetch(`${BASE}/api/stickers/${codigoRegistrado}`, { headers: { Authorization: `Bearer ${tok.accessToken}` } })).json();
   const ruta = new URL(ficha.qrUrl).pathname;
-  const movil = await sesion('verificador@trazagen.cl', { ...devices['iPhone 13'], locale: 'es-CL' });
+  const movil = await sesion('admin@trazagen.cl', { ...devices['iPhone 13'], locale: 'es-CL' });
   await movil.goto(`${BASE}${ruta}`);
   await movil.getByText('QR auténtico: firma Ed25519 verificada').waitFor();
-  await captura(movil, 'celular_expediente_verificador');
-  await movil.goto(`${BASE}/stickers/${codigoRegistrado}/perfil`);
-  await movil.getByText('Tu rol ve el resumen del perfil, no los alelos').waitFor();
-  await captura(movil, 'celular_perfil_sin_alelos', true);
+  await captura(movil, 'celular_expediente');
   await movil.goto(`${BASE}/s/${codigoRegistrado}.${'A'.repeat(86)}`);
   await movil.getByTestId('qr-falso').waitFor();
   await captura(movil, 'celular_qr_falso');
+
+  // ---------------------------------------------------------------- 9
+  paso('9. Eliminar un sticker sin uso; anular uno con datos (nunca se borra)');
+  await admin.goto(`${BASE}/stickers/${codigoSinUso}`);
+  await admin.getByTestId('eliminar-sticker').click();
+  await captura(admin, 'eliminar_sticker_sin_uso');
+  await admin.getByTestId('confirmar-accion').click();
+  await admin.waitForURL(/\/stickers$/);
+  const codigoDuplicado = asignacion.stickers.duplicado.codigo;
+  await admin.goto(`${BASE}/stickers/${codigoDuplicado}`);
+  await admin.getByTestId('anular-sticker').click();
+  await admin.getByTestId('motivo-anulacion').fill('Huella de otra persona cargada por error; se repite la toma');
+  await captura(admin, 'anular_sticker_con_datos');
+  await admin.getByTestId('confirmar-accion').click();
+  await admin.getByText(/Sticker anulado el/).waitFor();
+  await tab(admin, 'custodia');
+  await admin.getByTestId('verificar-cadena').click();
+  await admin.getByTestId('cadena-ok').waitFor();
+  await captura(admin, 'sticker_anulado_custodia', true);
 
   // ---------------------------------------------------------------- Pantallas de apoyo
   paso('Pantallas de apoyo');
   for (const [r, nombre] of [
     ['/stickers', 'stickers'],
+    ['/stickers?vista=lotes', 'lotes'],
     ['/personas', 'personas'],
-    ['/custodia', 'custodia_global'],
     ['/auditoria', 'auditoria'],
     ['/admin', 'administracion'],
   ]) {
@@ -228,10 +243,6 @@ try {
     await admin.waitForLoadState('networkidle');
     await captura(admin, nombre);
   }
-  const labMovil = await sesion('laboratorio@genlab.cl', { ...devices['iPhone 13'], locale: 'es-CL' });
-  await labMovil.goto(`${BASE}/stickers/${codigoRegistrado}/persona`);
-  await labMovil.getByText('Oculto para tu rol').waitFor();
-  await captura(labMovil, 'celular_laboratorio_documento_oculto');
 
   console.log(`\n✓ Guion completo: ${pasos.length} capturas en docs/capturas/`);
 } catch (e) {

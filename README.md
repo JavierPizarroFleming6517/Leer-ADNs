@@ -3,7 +3,7 @@
 **TrazaGen** une, en un solo registro verificable, las **huellas dactilares** y el **perfil genético (STR)** de una persona, obtenidos en una sola toma con un sticker adhesivo patentado:
 
 - La persona apoya los dedos con grafito sobre el sticker (5 o 10 casillas según el país). La huella se digitaliza con escáner o foto.
-- Las células de la piel que quedan en el adhesivo van al laboratorio, que extrae el ADN y entrega el perfil STR (CODIS CMF XML o planilla de genotipos).
+- Las células de la piel que quedan en el adhesivo van a un **laboratorio externo**, que extrae el ADN y devuelve el perfil STR (CODIS CMF XML o planilla de genotipos). TrazaGen no registra los procesos internos del laboratorio: registra a quién se envió el sticker y recibe el resultado.
 - Cada sticker sale de fábrica con un **QR firmado** y sin datos personales. **El código del sticker es el ID dactilogenético** de la persona.
 - La «fusión» entre huella y ADN es un **vínculo firmado con Ed25519** que une sticker, persona, plantillas de huella y perfil genético. No se calcula ningún hash a partir de los datos biológicos: se firma el registro y cualquier alteración posterior se detecta.
 
@@ -11,22 +11,23 @@ Esta es una **demo funcional**: todo lo que se ve funciona de verdad. Lectura re
 
 Desarrollado por **Vurp**.
 
-![Inicio](docs/capturas/02_inicio_admin_alerta_duplicado.jpg)
+![Inicio](docs/capturas/02_inicio_alertas_y_laboratorio.jpg)
 
 ## Qué hace
 
 | Necesidad del cliente | Cómo lo resuelve TrazaGen |
 | --- | --- |
-| Cadena de custodia inviolable | Cada etapa (fabricación, toma, digitalización, envío, recepción, extracción, cuantificación, amplificación, electroforesis, interpretación, perfil, vínculo, verificaciones) es un evento con el SHA-256 de su archivo y el hash del evento anterior del mismo sticker (cadena de hashes). Un **trigger de PostgreSQL** rechaza `UPDATE`, `DELETE` y `TRUNCATE` sobre la tabla. Botón «Verificar cadena». |
+| Cadena de custodia inviolable | Cada hecho (fabricación, toma, digitalización de huellas, envío al laboratorio, resultado del laboratorio, material agotado, vínculo, verificaciones, anulación) es un evento con el SHA-256 de su archivo y el hash del evento anterior del mismo sticker (cadena de hashes). Un **trigger de PostgreSQL** rechaza `UPDATE`, `DELETE` y `TRUNCATE`; la única excepción, verificada por la propia base, es la fabricación de un sticker que nunca se usó. Botón «Verificar cadena». |
 | Base comparativa | Huellas: búsqueda **1:N real con SourceAFIS** al digitalizar (alerta de duplicados) y en la pantalla de verificación. ADN: comparación exacta contra todos los perfiles registrados. |
-| Datos sensibles protegidos | Tabla `Persona` separada. Documento y fecha de nacimiento cifrados con **AES-256-GCM**; búsqueda y detección de duplicados con un **índice ciego HMAC-SHA256**. Cada rol ve solo lo suyo (el laboratorio no ve el documento, el verificador no ve los alelos). |
+| Datos sensibles protegidos | Tabla `Persona` separada. Documento y fecha de nacimiento cifrados con **AES-256-GCM**; búsqueda y detección de duplicados con un **índice ciego HMAC-SHA256**. Los permisos por rol se revisan en el servidor; la demo usa solo el usuario de administración. |
 | QR seguro | El QR contiene `{APP_URL}/s/{código}.{firma Ed25519}`. Un QR falsificado muestra una pantalla roja y queda en la auditoría. |
 | Integridad del vínculo | «Verificar integridad» recalcula todo desde la base (hashes de imágenes y plantillas, perfil canónico, archivo original) y dice exactamente qué cambió. |
+| Nada se borra si tiene datos | Solo se eliminan lotes y stickers sin uso. Un sticker con datos se **anula**: queda con su custodia, su vínculo se revoca y deja de participar en las búsquedas. |
 
 ## Arquitectura
 
 ```
-client/web   React + Vite + Tailwind. Una sola app con vistas según el rol.       :5173
+client/web   React + Vite + Tailwind. Una sola app web.                            :5173
 server       NestJS + Prisma + PostgreSQL. API, reglas, firmas, custodia, genética. :3000 (/api)
 afis         Java 17 + SourceAFIS 3.18.1. Microservicio HTTP de huellas.           :7070
              (com.sun.net.httpserver + Jackson, sin framework)
@@ -83,9 +84,9 @@ Los permisos se revisan en el servidor en cada solicitud (JWT con expiración y 
 ## Datos sembrados
 
 - 3 lotes, 40 stickers en todos los estados (30 `NUEVO`).
-- 8 personas completas (plantilla internacional de 5 dedos), cada una con huellas de dedos distintos de FVC2002 (impresión `_1`), consentimiento, toma, toda la cadena de laboratorio, perfil GlobalFiler ficticio y vínculo firmado. Dos de ellas con la muestra finalizada.
-- 1 sticker en laboratorio a medio proceso (muestra **M-000009**, en cuantificación), para el guion.
-- 1 caso de huella duplicada: otra persona a la que se le cargó la impresión `_2` de un dedo que ya pertenece a alguien. **SourceAFIS lo detecta al sembrar** (puntaje ≈ 370). Ese sticker también llegó al laboratorio con el sello dañado.
+- 8 personas completas (plantilla internacional de 5 dedos), cada una con huellas de dedos distintos de FVC2002 (impresión `_1`), consentimiento, toma, envío al laboratorio externo, perfil GlobalFiler ficticio y vínculo firmado. Dos de ellas con el material agotado (Finalizado).
+- 1 sticker **enviado al laboratorio y esperando el resultado**, para el guion (aparece en el Inicio, en «En el laboratorio externo»).
+- 1 caso de huella duplicada: otra persona a la que se le cargó la impresión `_2` de un dedo que ya pertenece a alguien. **SourceAFIS lo detecta al sembrar** (puntaje ≈ 370). También quedó enviado al laboratorio.
 - Verificaciones del mes e intentos de QR falso en la auditoría.
 - `datasets/asignacion.json`: qué archivo de FVC2002 quedó en qué persona y posición.
 
@@ -96,8 +97,8 @@ Los permisos se revisan en el servidor en cada solicitud (JWT con expiración y 
 | `consentimiento_firmado.pdf` | Consentimiento a subir en el paso 3. |
 | `toma/dedo_nuevo_indice_derecho.png` | Huella limpia (no registrada) para cargar en vivo. |
 | `toma/dedo_repetido.png` | Otra impresión de un dedo ya registrado: dispara la alerta de duplicado. |
-| `perfil_otra_muestra.xml` | CMF con un `SPECIMENID` que no es la muestra del sticker: se rechaza. |
-| `perfil_sticker_en_lab.xml` | CMF de la muestra M-000009 (sticker en laboratorio): se acepta, 20/20 CODIS, sin coincidencias. |
+| `perfil_otra_muestra.xml` | CMF con un `SPECIMENID` que no es el código del sticker: se rechaza. |
+| `perfil_sticker_en_lab.xml` | Resultado del laboratorio para el sticker que espera su perfil (su `SPECIMENID` es el código de ese sticker; lo reescribe cada siembra): se acepta, 20/20 CODIS, sin coincidencias. |
 | `huella_para_verificar.png` | Impresión `_5` de un dedo registrado: encuentra a su dueña con puntaje real. |
 | `huella_desconocida.png` | Dedo de DB4 que no se asignó a nadie: «Sin coincidencias». |
 | `perfil_persona_registrada.xml` | Perfil de una persona registrada: coincidencia por ADN. |
@@ -106,14 +107,15 @@ Los permisos se revisan en el servidor en cada solicitud (JWT con expiración y 
 
 Antes de grabar: `npm run demo:reset` y `npm run dev`. Las capturas de cada paso están en [`docs/capturas/`](docs/capturas).
 
-1. **Login como Admin → Inicio.** Datos realistas y la alerta «Posible huella duplicada» (además del sello dañado y los intentos de QR falso).
+1. **Login → Inicio.** Datos realistas, la alerta «Posible huella duplicada», los intentos de QR falso, los stickers por estado y los que esperan el resultado del laboratorio externo.
 2. **Stickers y lotes → Crear lote** de 5 stickers (plantilla internacional). Se abre la grilla de etiquetas QR: **Imprimir / Guardar PDF**. También se puede bajar el CSV para la fábrica.
-3. **Login como Operador → Escanear.** Escanea con la cámara una etiqueta impresa (o pega el código / la URL, o sube una foto del QR). Aparece «QR auténtico: firma Ed25519 verificada» → **Iniciar toma** → completa la persona → sube `consentimiento_firmado.pdf` → pestaña **Toma** → «Registrar toma» → pestaña **Huellas**: arrastra `toma/dedo_nuevo_indice_derecho.png` al índice derecho (minucias reales dibujadas, sin duplicados) y `toma/dedo_repetido.png` al medio derecho → **alerta de duplicado** con la persona, el dedo y el puntaje.
-4. **Login como Laboratorio → Laboratorio**, abre la muestra **M-000009** → registra Amplificación (GlobalFiler), Electroforesis e Interpretación → pestaña **Perfil genético**: sube `perfil_otra_muestra.xml` (**rechazado**: «El archivo corresponde a otra muestra») y luego `perfil_sticker_en_lab.xml` (**aceptado**, 20/20 CODIS, sin coincidencias).
+3. **Verificación → Por QR.** Escanea con la cámara una etiqueta impresa (o pega el código / la URL, o sube una foto del QR). Aparece «QR auténtico» → **Ver expediente** → **Iniciar toma** → completa la persona → sube `consentimiento_firmado.pdf` → pestaña **Toma** → «Registrar toma» → pestaña **Huellas**: arrastra `toma/dedo_nuevo_indice_derecho.png` al índice derecho (minucias reales dibujadas, sin duplicados) y `toma/dedo_repetido.png` al medio derecho → **alerta de duplicado** con la persona, el dedo y el puntaje → pestaña **Laboratorio y perfil** → **Registrar envío** al laboratorio externo (queda «Esperando resultado»).
+4. **Resultado del laboratorio.** En el Inicio, «En el laboratorio externo», abre el sticker que lleva más días esperando → sube `perfil_otra_muestra.xml` (**rechazado**: «El archivo corresponde a otra muestra») y luego `perfil_sticker_en_lab.xml` (**aceptado**, 20/20 CODIS, sin coincidencias). El sticker pasa a «En uso».
 5. Pestaña **Vínculo** → **Firmar vínculo** → **Verificar integridad ✓**. Pestaña **Custodia** → **Verificar cadena ✓**.
 6. **Verificación** → sube `huella_para_verificar.png` → «Coincide con Valeria Andrea Contreras Ibáñez, meñique derecho, sticker TG-…, puntaje ≈ 166» → sube `huella_desconocida.png` → «Sin coincidencias» → «Por perfil genético» → `perfil_persona_registrada.xml` → coincidencia.
 7. En una terminal: `npm run demo:alterar` (modifica un alelo **directamente en PostgreSQL**, sin pasar por la API, e imprime la persona y el sticker). Vuelve a ese sticker → **Vínculo → Verificar integridad ✗**: indica que cambió el perfil y el locus exacto (p. ej. D8S1179: 12, 15 → 12, 16). El Inicio también muestra la alerta.
-8. **Desde el celular**: escanea con la cámara del teléfono el QR de una persona registrada (abre la ficha, ícono del QR) → inicia sesión → expediente según el rol (como verificador no se ven los alelos; como laboratorio no se ve el documento).
+8. **Desde el celular**: escanea con la cámara del teléfono el QR de una persona registrada (abre la ficha, ícono del QR) → inicia sesión → expediente adaptado al celular.
+9. (Opcional) **Eliminar y anular**: un sticker sin uso se elimina; uno con datos (por ejemplo el del duplicado) solo se **anula**, con motivo, y su cadena de custodia sigue íntegra.
 
 **Celular en la misma red:** en `server/.env` pon `APP_URL=http://IP-DE-ESTE-EQUIPO:5173` y reinicia `npm run dev`. Las URL de los QR se calculan con `APP_URL`, así que las etiquetas impresas antes de cambiarla apuntan a la dirección anterior. La cámara del teléfono abre la URL en el navegador sin problema; el lector de QR **dentro** de la app necesita HTTPS (o `localhost`) para usar la cámara, por eso en red local conviene usar la cámara nativa del teléfono, el código manual o una foto.
 
@@ -131,9 +133,9 @@ Antes de grabar: `npm run demo:reset` y `npm run dev`. Las capturas de cada paso
 
 ## Pruebas
 
-- **Automáticas (`npm test`, 32 pruebas):** firma y verificación del QR (firma alterada, de otro código o de otra llave), cadena de hashes (detalle, fecha o responsable modificados, evento eliminado o reemplazado) y el **trigger** que bloquea `UPDATE`/`DELETE`/`TRUNCATE`; cifrado AES-256-GCM (IV aleatorio, autenticación) e índice ciego; lectores CMF/XLSX/CSV (mismo JSON, DTD rechazado, alelos inválidos); validación de la muestra del archivo contra la del sticker y de los loci contra el kit; vínculo firmado (válido, alelo cambiado, huella reemplazada, persona cambiada, documento editado, archivo de origen alterado).
+- **Automáticas (`npm test`, 36 pruebas):** firma y verificación del QR (firma alterada, de otro código o de otra llave), cadena de hashes (detalle, fecha o responsable modificados, evento eliminado o reemplazado) y el **trigger** que bloquea `UPDATE`/`DELETE`/`TRUNCATE` (sin excepciones por variable de sesión; solo se puede borrar la fabricación de un sticker sin uso); cifrado AES-256-GCM (IV aleatorio, autenticación) e índice ciego; lectores CMF/XLSX/CSV (mismo JSON, DTD rechazado, alelos inválidos); validación del `SPECIMENID` del archivo contra el código del sticker y de los loci contra el kit; vínculo firmado (válido, alelo cambiado, huella reemplazada, persona cambiada, documento editado, archivo de origen alterado).
 - **Motor biométrico con datos reales (`npm run test:afis`):** 226 de 280 pares genuinos (80,7 %) superan el umbral 40; 0 de 1.560 pares impostores lo superan (máximo 24,1). Detalle en [`docs/DECISIONES.md`](docs/DECISIONES.md).
-- **End-to-end (`npm run test:e2e`):** sigue los 8 pasos del guion y deja 32 capturas.
+- **End-to-end (`npm run test:e2e`):** sigue los pasos del guion (incluidos eliminar y anular) y deja 32 capturas.
 
 ## Seguridad
 

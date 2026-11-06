@@ -83,32 +83,75 @@ describe('Trigger de PostgreSQL: EventoCustodia es de solo inserción', () => {
   beforeAll(() => db.connect());
   afterAll(() => db.end());
 
-  test('rechaza UPDATE, DELETE y TRUNCATE incluso con acceso directo a la base', async () => {
+  // Crea (dentro de la transacción en curso) un sticker con su evento de fabricación.
+  async function sticker(conPersona: boolean) {
+    const ids = { usuario: randomUUID(), plantilla: randomUUID(), lote: randomUUID(), sticker: randomUUID(), persona: randomUUID() };
+    await db.query(`INSERT INTO "Usuario"(id, nombre, email, rol, "passwordHash") VALUES ($1, 'Prueba', $2, 'ADMIN', 'x')`, [ids.usuario, `prueba-${ids.usuario}@test`]);
+    await db.query(`INSERT INTO "PlantillaSticker"(id, nombre, pais, posiciones) VALUES ($1, $2, 'Test', '{1}')`, [ids.plantilla, `p-${ids.plantilla}`]);
+    await db.query(`INSERT INTO "Lote"(id, codigo, "plantillaId", cantidad, "fechaFabricacion", "versionDiseno", fabrica, "creadoPorId") VALUES ($1, $2, $3, 1, now(), '1', 'f', $4)`, [ids.lote, `L-${ids.lote}`, ids.plantilla, ids.usuario]);
+    if (conPersona) {
+      await db.query(`INSERT INTO "Persona"(id, nombres, apellidos, "tipoDocumento", "numeroDocumentoCifrado", "documentoIndiceCiego", pais, nacionalidad) VALUES ($1, 'A', 'B', 'RUN', 'x', $2, 'Chile', 'Chilena')`, [ids.persona, ids.persona]);
+    }
+    await db.query(`INSERT INTO "Sticker"(id, codigo, "loteId", "personaId", "updatedAt") VALUES ($1, $2, $3, $4, now())`, [ids.sticker, `T-${ids.sticker}`, ids.lote, conPersona ? ids.persona : null]);
+    await db.query(
+      `INSERT INTO "EventoCustodia"(id, "stickerId", secuencia, tipo, fecha, "responsableId", "responsableNombre", detalle, "hashAnterior", "hashEvento") VALUES ($1, $2, 1, 'FABRICACION', now(), $3, 'Prueba', '{}', $4, $5)`,
+      [randomUUID(), ids.sticker, ids.usuario, GENESIS, randomUUID()],
+    );
+    return ids;
+  }
+
+  async function rechaza(sql: string) {
+    await db.query('SAVEPOINT intento');
+    await expect(db.query(sql)).rejects.toThrow(/solo inserción/);
+    await db.query('ROLLBACK TO SAVEPOINT intento');
+  }
+
+  test('rechaza UPDATE, DELETE y TRUNCATE sobre un sticker con datos, incluso con acceso directo a la base', async () => {
     await db.query('BEGIN');
     try {
-      const usuario = randomUUID();
-      const plantilla = randomUUID();
-      const lote = randomUUID();
-      const sticker = randomUUID();
-      await db.query(`INSERT INTO "Usuario"(id, nombre, email, rol, "passwordHash") VALUES ($1, 'Prueba', $2, 'ADMIN', 'x')`, [usuario, `prueba-${usuario}@test`]);
-      await db.query(`INSERT INTO "PlantillaSticker"(id, nombre, pais, posiciones) VALUES ($1, $2, 'Test', '{1}')`, [plantilla, `p-${plantilla}`]);
-      await db.query(`INSERT INTO "Lote"(id, codigo, "plantillaId", cantidad, "fechaFabricacion", "versionDiseno", fabrica, "creadoPorId") VALUES ($1, $2, $3, 1, now(), '1', 'f', $4)`, [lote, `L-${lote}`, plantilla, usuario]);
-      await db.query(`INSERT INTO "Sticker"(id, codigo, "loteId", "updatedAt") VALUES ($1, $2, $3, now())`, [sticker, `T-${sticker}`, lote]);
-      await db.query(
-        `INSERT INTO "EventoCustodia"(id, "stickerId", secuencia, tipo, fecha, "responsableId", "responsableNombre", detalle, "hashAnterior", "hashEvento") VALUES ($1, $2, 1, 'FABRICACION', now(), $3, 'Prueba', '{}', $4, $5)`,
-        [randomUUID(), sticker, usuario, GENESIS, randomUUID()],
-      );
-      for (const sql of [
-        `UPDATE "EventoCustodia" SET "responsableNombre" = 'Otro' WHERE "stickerId" = '${sticker}'`,
-        `DELETE FROM "EventoCustodia" WHERE "stickerId" = '${sticker}'`,
-        `TRUNCATE "EventoCustodia" CASCADE`,
-      ]) {
-        await db.query('SAVEPOINT intento');
-        await expect(db.query(sql)).rejects.toThrow(/solo inserción/);
-        await db.query('ROLLBACK TO SAVEPOINT intento');
-      }
-      const r = await db.query(`SELECT "responsableNombre" FROM "EventoCustodia" WHERE "stickerId" = $1`, [sticker]);
+      const { sticker: id } = await sticker(true);
+      await rechaza(`UPDATE "EventoCustodia" SET "responsableNombre" = 'Otro' WHERE "stickerId" = '${id}'`);
+      await rechaza(`DELETE FROM "EventoCustodia" WHERE "stickerId" = '${id}'`);
+      await rechaza(`TRUNCATE "EventoCustodia" CASCADE`);
+      const r = await db.query(`SELECT "responsableNombre" FROM "EventoCustodia" WHERE "stickerId" = $1`, [id]);
       expect(r.rows).toEqual([{ responsableNombre: 'Prueba' }]);
+    } finally {
+      await db.query('ROLLBACK');
+    }
+  });
+
+  test('ninguna variable de sesión abre la custodia (la excepción por variable fue eliminada)', async () => {
+    await db.query('BEGIN');
+    try {
+      const { sticker: id } = await sticker(true);
+      await db.query(`SET LOCAL trazagen.borrar_lote = '1'`);
+      await rechaza(`DELETE FROM "EventoCustodia" WHERE "stickerId" = '${id}'`);
+    } finally {
+      await db.query('ROLLBACK');
+    }
+  });
+
+  test('solo se puede borrar la fabricación de un sticker sin uso (nuevo y sin persona)', async () => {
+    await db.query('BEGIN');
+    try {
+      const { sticker: id } = await sticker(false);
+      const r = await db.query(`DELETE FROM "EventoCustodia" WHERE "stickerId" = $1`, [id]);
+      expect(r.rowCount).toBe(1);
+      await db.query(`DELETE FROM "Sticker" WHERE id = $1`, [id]);
+    } finally {
+      await db.query('ROLLBACK');
+    }
+  });
+
+  test('un sticker sin persona pero con otro evento además de la fabricación no se puede borrar', async () => {
+    await db.query('BEGIN');
+    try {
+      const { sticker: id, usuario } = await sticker(false);
+      await db.query(
+        `INSERT INTO "EventoCustodia"(id, "stickerId", secuencia, tipo, fecha, "responsableId", "responsableNombre", detalle, "hashAnterior", "hashEvento") VALUES ($1, $2, 2, 'VERIFICACION', now(), $3, 'Prueba', '{}', 'x', $4)`,
+        [randomUUID(), id, usuario, randomUUID()],
+      );
+      await rechaza(`DELETE FROM "EventoCustodia" WHERE "stickerId" = '${id}'`);
     } finally {
       await db.query('ROLLBACK');
     }

@@ -169,9 +169,11 @@ Para recorrer todo el flujo paso a paso, con los archivos de prueba de
 examples/demo/, sigue:   docs/GUIA_PRUEBA.md
 
 Después de un "demo:reset", git muestra modificado el archivo
-datasets/asignacion.json. Es normal. Para descartarlo:
+datasets/asignacion.json y examples/demo/perfil_sticker_en_lab.xml
+(la siembra los reescribe con los códigos de sticker nuevos). Es normal.
+Para descartarlos:
 
-  git checkout datasets/asignacion.json
+  git checkout datasets/asignacion.json examples/demo/perfil_sticker_en_lab.xml
 
 
 ---------------------------------------------------------------------

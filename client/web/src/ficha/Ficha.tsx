@@ -85,7 +85,7 @@ export default function Ficha() {
 
       {anulado ? (
         <Aviso tono="error" titulo={`Sticker anulado el ${fecha(anulado.fecha)}`} className="mb-5">
-          {anulado.motivo ?? 'Sin motivo registrado.'} Su registro y su cadena de custodia se conservan; ya no admite cambios ni participa en las búsquedas.
+          {anulado.motivo ? anulado.motivo.replace(/\.?\s*$/, '.') : 'Sin motivo registrado.'} Su registro y su cadena de custodia se conservan; ya no admite cambios ni participa en las búsquedas.
         </Aviso>
       ) : null}
 

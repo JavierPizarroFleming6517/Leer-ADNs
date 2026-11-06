@@ -45,22 +45,22 @@ describe('Lectores de archivos de laboratorio', () => {
   });
 });
 
-describe('Validación de custodia: muestra del archivo vs. muestra del sticker', () => {
+describe('Validación de custodia: SPECIMENID del archivo vs. código del sticker', () => {
   const marcadores = perfilGlobalFiler(7, 'F');
 
-  test('acepta el archivo cuyo SPECIMENID es la muestra del sticker (sin importar mayúsculas)', () => {
-    const leido = leerCmf(construirCmf([{ id: 'm-000009', marcadores }]));
-    expect(muestraDelArchivo(leido, 'M-000009').marcadores).toEqual(marcadores);
+  test('acepta el archivo cuyo SPECIMENID es el código del sticker (sin importar mayúsculas)', () => {
+    const leido = leerCmf(construirCmf([{ id: 'tg-7k2m-9qxa', marcadores }]));
+    expect(muestraDelArchivo(leido, 'TG-7K2M-9QXA').marcadores).toEqual(marcadores);
   });
 
   test('en un lote con varias muestras toma solo la del sticker', () => {
-    const leido = leerCmf(construirCmf([{ id: 'M-000001', marcadores: perfilGlobalFiler(1, 'M') }, { id: 'M-000009', marcadores }]));
-    expect(muestraDelArchivo(leido, 'M-000009').marcadores).toEqual(marcadores);
+    const leido = leerCmf(construirCmf([{ id: 'TG-0000-0001', marcadores: perfilGlobalFiler(1, 'M') }, { id: 'TG-7K2M-9QXA', marcadores }]));
+    expect(muestraDelArchivo(leido, 'TG-7K2M-9QXA').marcadores).toEqual(marcadores);
   });
 
   test('rechaza un archivo de otra muestra', () => {
-    const leido = leerCmf(construirCmf([{ id: 'M-000431', marcadores }]));
-    expect(() => muestraDelArchivo(leido, 'M-000009')).toThrow(/El archivo corresponde a otra muestra/);
+    const leido = leerCmf(construirCmf([{ id: 'TG-9Q4M-2XKD', marcadores }]));
+    expect(() => muestraDelArchivo(leido, 'TG-7K2M-9QXA')).toThrow(/El archivo corresponde a otra muestra/);
   });
 
   test('valida los loci contra el kit declarado', () => {
