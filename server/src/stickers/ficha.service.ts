@@ -41,7 +41,6 @@ export class FichaService {
             coincididaPor: { select: { puntaje: true, huella: { select: { posicion: true, sticker: { select: { codigo: true, persona: { select: { nombres: true, apellidos: true } } } } } } } },
           },
         },
-        muestra: true,
         perfil: { include: { archivo: { select: { nombre: true } } } },
         adjuntos: { orderBy: { createdAt: 'asc' }, select: { id: true, nombre: true, etapa: true, sha256: true, tamano: true, interpretado: true, createdAt: true } },
         vinculos: { orderBy: { firmadoEn: 'desc' }, include: { firmadoPor: { select: { nombre: true } } } },
@@ -51,6 +50,7 @@ export class FichaService {
     await this.auditoria.registrar(ctx, 'CONSULTA_FICHA', { recurso: s.codigo });
 
     const eventos = await this.custodia.eventosDeSticker(s.id);
+    const envio = [...eventos].reverse().find((e) => e.tipo === 'ENVIO');
     const vigente = s.vinculos.find((v) => v.estado === 'VIGENTE');
     const verAlelos = puedeVerAlelos(rol);
     const marcadores = s.perfil ? ordenarMarcadores(s.perfil.marcadores as Marcadores) : null;
@@ -62,6 +62,7 @@ export class FichaService {
         estado: s.estado,
         creado: s.createdAt,
         vinculadoEn: s.vinculadoEn,
+        anulado: s.anuladoEn ? { fecha: s.anuladoEn, motivo: s.motivoAnulacion } : null,
         lote: { id: s.loteId, codigo: s.lote.codigo, fabrica: s.lote.fabrica, versionDiseno: s.lote.versionDiseno, fechaFabricacion: s.lote.fechaFabricacion },
         plantilla: { nombre: s.lote.plantilla.nombre, pais: s.lote.plantilla.pais, posiciones: s.lote.plantilla.posiciones },
       },
@@ -96,27 +97,22 @@ export class FichaService {
           ...h.coincididaPor.map((c) => ({ sticker: c.huella.sticker.codigo, dedo: DEDOS[c.huella.posicion], puntaje: c.puntaje, persona: c.huella.sticker.persona ? `${c.huella.sticker.persona.nombres} ${c.huella.sticker.persona.apellidos}` : null })),
         ],
       })),
-      muestra: s.muestra
+      laboratorio: envio
         ? {
-            codigo: s.muestra.codigo,
-            laboratorio: s.muestra.laboratorio,
-            estadoSello: s.muestra.estadoSello,
-            etapa: s.muestra.etapaActual,
-            etapaNombre: NOMBRE_EVENTO[s.muestra.etapaActual],
-            etapaDesde: s.muestra.etapaDesde,
-            adnUgMl: s.muestra.adnUgMl,
-            kit: s.muestra.kit,
-            loteKit: s.muestra.loteKit,
-            equipos: s.muestra.equipos,
-            tubosAlmacenados: s.muestra.tubosAlmacenados,
-            materialRestante: s.muestra.materialRestante,
-            recibida: s.muestra.createdAt,
+            enviado: envio.fecha,
+            destino: String((envio.detalle as { destino?: string }).destino ?? '—'),
+            transportista: ((envio.detalle as { transportista?: string | null }).transportista ?? null) as string | null,
+            sello: ((envio.detalle as { sello?: string | null }).sello ?? null) as string | null,
+            responsable: envio.responsableNombre,
+            diasEsperando: s.perfil ? null : Math.floor((Date.now() - envio.fecha.getTime()) / 86_400_000),
           }
         : null,
       perfil: s.perfil
         ? {
             codigoMuestra: s.perfil.codigoMuestra,
             kit: s.perfil.kit,
+            laboratorio: s.perfil.laboratorio,
+            materialRestante: s.perfil.materialRestante,
             formato: NOMBRE_FORMATO[s.perfil.formatoOrigen as Formato] ?? s.perfil.formatoOrigen,
             archivoNombre: s.perfil.archivo.nombre,
             archivoId: verAlelos ? s.perfil.archivoId : null,
@@ -127,7 +123,7 @@ export class FichaService {
             alelosVisibles: verAlelos,
           }
         : null,
-      adjuntos: s.adjuntos.map((a) => ({ ...a, etapaNombre: a.etapa ? NOMBRE_EVENTO[a.etapa] : null })),
+      adjuntos: s.adjuntos.map((a) => ({ ...a, etapaNombre: a.interpretado ? 'Perfil genético' : 'Archivo del laboratorio' })),
       vinculo: vigente ? { ...this.vinculos.vista(vigente), firmadoPor: vigente.firmadoPor.nombre } : null,
       vinculosRevocados: s.vinculos.filter((v) => v.estado === 'REVOCADO').map((v) => ({ id: v.id, firmadoEn: v.firmadoEn, revocadoEn: v.revocadoEn, documentoSha256: v.documentoSha256 })),
       custodia: {

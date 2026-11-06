@@ -41,6 +41,8 @@ enum TipoEvento {
   PERFIL_CARGADO
   VINCULO_FIRMADO
   VERIFICACION
+  MATERIAL_AGOTADO
+  ANULACION
 }
 
 enum EstadoVinculo {
@@ -107,12 +109,14 @@ model Sticker {
   personaId    String?       @db.Uuid
   persona      Persona?      @relation(fields: [personaId], references: [id])
   vinculadoEn  DateTime?
+  // Un sticker con datos no se borra: se anula (queda en el registro y en la custodia).
+  anuladoEn       DateTime?
+  motivoAnulacion String?
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
   toma      TomaMuestra?
   huellas   Huella[]
-  muestra   MuestraBiologica?
   perfil    PerfilGenetico?
   adjuntos  ArchivoAdjunto[]
   eventos   EventoCustodia[]
@@ -210,29 +214,14 @@ model CoincidenciaHuella {
   createdAt   DateTime @default(now())
 }
 
-model MuestraBiologica {
-  id             String   @id @default(uuid()) @db.Uuid
-  codigo         String   @unique
-  stickerId      String   @unique @db.Uuid
-  sticker        Sticker  @relation(fields: [stickerId], references: [id])
-  laboratorio    String
-  estadoSello    String
-  etapaActual    TipoEvento
-  etapaDesde     DateTime
-  adnUgMl        Float?
-  kit            String?
-  loteKit        String?
-  equipos        String?
-  tubosAlmacenados Int?
-  materialRestante Boolean @default(true)
-  createdAt      DateTime @default(now())
-}
-
+// Resultado que entrega el laboratorio externo. codigoMuestra es el SPECIMENID del archivo (= código del sticker).
 model PerfilGenetico {
   id             String   @id @default(uuid()) @db.Uuid
   stickerId      String   @unique @db.Uuid
   sticker        Sticker  @relation(fields: [stickerId], references: [id])
   codigoMuestra  String
+  laboratorio    String?
+  materialRestante Boolean @default(true)
   marcadores     Json
   kit            String
   formatoOrigen  String
@@ -242,7 +231,7 @@ model PerfilGenetico {
   createdAt      DateTime @default(now())
 }
 
-// Archivos de laboratorio guardados sin modificar: almacenados, no interpretados.
+// Archivos del laboratorio externo guardados sin modificar: almacenados, no interpretados.
 model ArchivoAdjunto {
   id          String   @id @default(uuid()) @db.Uuid
   stickerId   String?  @db.Uuid

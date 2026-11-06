@@ -155,26 +155,14 @@ async function sembrar(app: INestApplicationContext, base: { usuarios: Usuarios;
     return persona;
   }
 
-  const qpcr = (codigoMuestra: string, adn: number) =>
-    Buffer.from(['Well,Sample Name,Target,Cq,Quantity (ng/uL)', `A1,${codigoMuestra},Small Autosomal,27.41,${(adn * 1000).toFixed(2)}`, `A2,${codigoMuestra},Large Autosomal,28.96,${(adn * 820).toFixed(2)}`, `A3,${codigoMuestra},Y,${adn > 0 ? '29.88' : 'Undetermined'},${(adn * 450).toFixed(2)}`, 'A4,NTC,Small Autosomal,Undetermined,0'].join('\r\n'), 'utf8');
+  const qpcr = (codigo: string, adn: number) =>
+    Buffer.from(['Well,Sample Name,Target,Cq,Quantity (ng/uL)', `A1,${codigo},Small Autosomal,27.41,${(adn * 1000).toFixed(2)}`, `A2,${codigo},Large Autosomal,28.96,${(adn * 820).toFixed(2)}`, `A3,${codigo},Y,29.88,${(adn * 450).toFixed(2)}`, 'A4,NTC,Small Autosomal,Undetermined,0'].join('\r\n'), 'utf8');
 
-  async function laboratorio(codigo: string, hasta: string, t0: number, sello: 'INTACTO' | 'DANADO' = 'INTACTO') {
-    const m = await lab.recepcion(codigo, { laboratorio: LAB, estadoSello: sello, observaciones: sello === 'INTACTO' ? 'Bolsa sellada, sticker en buen estado.' : 'Bolsa con el sello despegado en una esquina; sticker sin daño visible.' }, null, ctx('laboratorio', t0));
-    const etapas: [string, Record<string, unknown>, ((cm: string) => { nombre: string; datos: Buffer; mime: string }) | null][] = [
-      ['EXTRACCION', { metodo: 'Orgánica (fenol-cloroformo) desde adhesivo', equipos: 'Termobloque Eppendorf · Centrífuga 5424' }, null],
-      ['CUANTIFICACION', { adnUgMl: 0.031 + ((t0 / 1000) % 37) / 1000, metodo: 'qPCR · Quantifiler Trio' }, (cm) => ({ nombre: `qpcr_${cm}.csv`, datos: qpcr(cm, 0.04), mime: 'text/csv' })],
-      ['AMPLIFICACION', { kit: 'GlobalFiler', loteKit: 'GF-2611-0457', equipos: 'Veriti 96-Well' }, null],
-      ['ELECTROFORESIS', { equipos: 'SeqStudio 24 Flex' }, null],
-      ['INTERPRETACION', { software: 'GeneMapper ID-X 1.6', analista: 'Dra. Valentina Soto', tubosAlmacenados: 2 }, null],
-    ];
-    let t = t0;
-    if (hasta === 'RECEPCION_LAB') return { muestra: m.codigo, t };
-    for (const [etapa, datos, archivo] of etapas) {
-      t += DIA * (0.6 + ((t / 1000) % 5) / 10);
-      await lab.etapa(codigo, { etapa: etapa as never, ...datos }, archivo ? archivo(m.codigo) : null, ctx('laboratorio', t));
-      if (etapa === hasta) break;
-    }
-    return { muestra: m.codigo, t };
+  // El laboratorio es externo: devuelve el perfil (CMF con SPECIMENID = código del sticker) y, a veces, otros archivos.
+  async function resultadoLaboratorio(codigo: string, marcadores: Record<string, string[]>, t: number, conQpcr: boolean) {
+    const xml = construirCmf([{ id: codigo, marcadores }], new Date(t - hora(2)));
+    await lab.cargarPerfil(codigo, { nombre: `GlobalFiler_${codigo}.xml`, datos: Buffer.from(xml, 'utf8'), mime: 'application/xml' }, { kit: 'GlobalFiler', laboratorio: LAB, materialRestante: true }, ctx('admin', t));
+    if (conQpcr) await lab.adjunto(codigo, { nombre: `qpcr_${codigo}.csv`, datos: qpcr(codigo, 0.042), mime: 'text/csv' }, ctx('admin', t + 60_000));
   }
 
   // ------------------------------------------------------------ 8 personas completas
@@ -189,18 +177,17 @@ async function sembrar(app: INestApplicationContext, base: { usuarios: Usuarios;
       dedos.push({ posicion: pos, dedo: PARA_PERSONAS[k++], impresion: 1 });
     }
     await tomar(codigo, p, t0, dedos, p.noObtenible ? [p.noObtenible] : []);
-    const { muestra, t } = await laboratorio(codigo, 'INTERPRETACION', t0 + DIA);
+    const t = t0 + (5 + (i % 3)) * DIA + hora(2);
     const marcadores = perfilGlobalFiler(i + 1, p.sexo);
     perfiles[codigo] = marcadores;
-    const xml = construirCmf([{ id: muestra, marcadores }], new Date(t + hora(2)));
-    await lab.cargarPerfil(codigo, { nombre: `GlobalFiler_${muestra}.xml`, datos: Buffer.from(xml, 'utf8'), mime: 'application/xml' }, undefined, ctx('laboratorio', t + hora(3)));
-    await vinculos.firmar(codigo, ctx('laboratorio', t + hora(5)));
-    if (i < 2) await lab.finalizar(codigo, 'Se agotó el material del adhesivo en la re-extracción.', ctx('laboratorio', t + 4 * DIA));
+    await resultadoLaboratorio(codigo, marcadores, t, i < 3);
+    await vinculos.firmar(codigo, ctx('admin', t + hora(1)));
+    if (i < 2) await lab.materialAgotado(codigo, 'El laboratorio informa que se agotó el material del adhesivo en la re-extracción.', ctx('admin', t + 4 * DIA));
     for (const d of dedos) {
       asignacion.push({ persona: `${p.nombres} ${p.apellidos}`, sticker: codigo, posicion: d.posicion, dedo: DEDOS[d.posicion], archivo: rel(d.dedo, 1), dpi: DPI[d.dedo.db] });
     }
     if (p.noObtenible) asignacion.push({ persona: `${p.nombres} ${p.apellidos}`, sticker: codigo, posicion: p.noObtenible.posicion, dedo: DEDOS[p.noObtenible.posicion], archivo: null, noObtenible: p.noObtenible.motivo });
-    process.stdout.write(`  · ${codigo} ${p.nombres} ${p.apellidos}: ${dedos.length} huellas, muestra ${muestra}, vínculo firmado\n`);
+    process.stdout.write(`  · ${codigo} ${p.nombres} ${p.apellidos}: ${dedos.length} huellas, perfil del laboratorio externo, vínculo firmado\n`);
   }
   console.log('✓ 8 personas completas con huellas, perfil GlobalFiler, custodia y vínculo firmado.');
 
@@ -215,14 +202,12 @@ async function sembrar(app: INestApplicationContext, base: { usuarios: Usuarios;
     { posicion: 4, motivo: 'Crestas ilegibles: grafito insuficiente en la casilla' },
     { posicion: 5, motivo: 'Crestas ilegibles: grafito insuficiente en la casilla' },
   ]);
-  const labA = await laboratorio(codigoLabA, 'CUANTIFICACION', tA + DIA);
-  RESERVA_LAB.forEach((d, j) => asignacion.push({ persona: `${LAB_A.nombres} ${LAB_A.apellidos}`, sticker: codigoLabA, posicion: j + 1, dedo: DEDOS[j + 1], archivo: rel(d, 1), dpi: DPI[d.db], nota: 'Sticker en laboratorio (guion, paso 4)' }));
+  RESERVA_LAB.forEach((d, j) => asignacion.push({ persona: `${LAB_A.nombres} ${LAB_A.apellidos}`, sticker: codigoLabA, posicion: j + 1, dedo: DEDOS[j + 1], archivo: rel(d, 1), dpi: DPI[d.db], nota: 'Enviado al laboratorio externo, esperando el resultado (guion, paso 4)' }));
 
   // ------------------------------------------------------------ Caso de duplicado: otra persona con la impresión _2 de un dedo ya registrado
   const codigoLabB = codigos[9];
   const tB = ahora - 2 * DIA + hora(15);
   await tomar(codigoLabB, LAB_B, tB, [{ posicion: 2, dedo: DUPLICADO_SEMBRADO, impresion: 2 }], []);
-  const labB = await laboratorio(codigoLabB, 'RECEPCION_LAB', tB + hora(20), 'DANADO');
   const dueñoDuplicado = asignacion.find((a) => a.archivo === rel(DUPLICADO_SEMBRADO, 1));
   asignacion.push({ persona: `${LAB_B.nombres} ${LAB_B.apellidos}`, sticker: codigoLabB, posicion: 2, dedo: DEDOS[2], archivo: rel(DUPLICADO_SEMBRADO, 2), dpi: DPI[DUPLICADO_SEMBRADO.db], nota: `Duplicado sembrado: misma huella que ${dueñoDuplicado?.persona} (${dueñoDuplicado?.dedo}, ${dueñoDuplicado?.sticker})` });
   const det = resultadosHuellas.find((r) => r.sticker === codigoLabB);
@@ -258,8 +243,8 @@ async function sembrar(app: INestApplicationContext, base: { usuarios: Usuarios;
 
   const fechaArchivos = new Date('2026-11-02T09:00:00Z'); // fija: los archivos de ejemplo no cambian entre siembras
   const perfilLab = perfilGlobalFiler(101, LAB_A.sexo);
-  writeFileSync(join(DEMO, 'perfil_sticker_en_lab.xml'), construirCmf([{ id: labA.muestra, marcadores: perfilLab }], fechaArchivos));
-  writeFileSync(join(DEMO, 'perfil_otra_muestra.xml'), construirCmf([{ id: 'M-000431', marcadores: perfilGlobalFiler(202, 'M') }], fechaArchivos));
+  writeFileSync(join(DEMO, 'perfil_sticker_en_lab.xml'), construirCmf([{ id: codigoLabA, marcadores: perfilLab }], fechaArchivos));
+  writeFileSync(join(DEMO, 'perfil_otra_muestra.xml'), construirCmf([{ id: 'TG-9Q4M-2XKD', marcadores: perfilGlobalFiler(202, 'M') }], fechaArchivos));
   const registrada = PERSONAS[4];
   writeFileSync(join(DEMO, 'perfil_persona_registrada.xml'), construirCmf([{ id: 'CONSULTA-2026-0912', marcadores: perfiles[codigos[4]], categoria: 'Query' }], fechaArchivos));
   writeFileSync(
@@ -292,13 +277,13 @@ async function sembrar(app: INestApplicationContext, base: { usuarios: Usuarios;
       'huella_desconocida.png': { origen: rel(DESCONOCIDO, 2), dueño: null },
       'toma/dedo_nuevo_indice_derecho.png': { origen: rel(RESERVA_TOMA, 1), dueño: null },
       'toma/dedo_repetido.png': { origen: rel(DUPLICADO_TOMA, 3), dueño: dueñoRepetido },
-      'perfil_sticker_en_lab.xml': { sticker: codigoLabA, muestra: labA.muestra },
-      'perfil_otra_muestra.xml': { specimenId: 'M-000431', esperado: 'rechazo' },
+      'perfil_sticker_en_lab.xml': { sticker: codigoLabA, specimenId: codigoLabA },
+      'perfil_otra_muestra.xml': { specimenId: 'TG-9Q4M-2XKD', esperado: 'rechazo' },
       'perfil_persona_registrada.xml': { coincideCon: `${registrada.nombres} ${registrada.apellidos}`, sticker: codigos[4] },
     },
     stickers: {
-      enLaboratorioGuion: { codigo: codigoLabA, muestra: labA.muestra, etapa: 'CUANTIFICACION' },
-      duplicado: { codigo: codigoLabB, muestra: labB.muestra, etapa: 'RECEPCION_LAB', sello: 'DANADO' },
+      enLaboratorioGuion: { codigo: codigoLabA, estado: 'Enviado al laboratorio externo, esperando el resultado' },
+      duplicado: { codigo: codigoLabB, estado: 'Enviado al laboratorio externo, esperando el resultado' },
       alterable: { codigo: codigos[1], persona: `${PERSONAS[1].nombres} ${PERSONAS[1].apellidos}` },
     },
   };
@@ -306,7 +291,7 @@ async function sembrar(app: INestApplicationContext, base: { usuarios: Usuarios;
 
   const totalNuevos = await prisma.sticker.count({ where: { estado: 'NUEVO' } });
   console.log(`✓ examples/demo y datasets/asignacion.json actualizados.`);
-  console.log(`\n  Sticker en laboratorio para el guion: ${codigoLabA} (muestra ${labA.muestra})`);
+  console.log(`\n  Sticker esperando el resultado del laboratorio (guion): ${codigoLabA}`);
   console.log(`  Sticker con huella duplicada:         ${codigoLabB}`);
   console.log(`  huella_para_verificar.png pertenece a ${dueñoVerificar?.persona} (${dueñoVerificar?.dedo}, ${dueñoVerificar?.sticker})`);
   console.log(`  Stickers NUEVO disponibles: ${totalNuevos}`);

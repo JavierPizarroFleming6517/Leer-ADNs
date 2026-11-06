@@ -18,6 +18,8 @@ export const NOMBRE_EVENTO: Record<TipoEvento, string> = {
   PERFIL_CARGADO: 'Perfil genético cargado',
   VINCULO_FIRMADO: 'Vínculo firmado',
   VERIFICACION: 'Verificación',
+  MATERIAL_AGOTADO: 'Material agotado (informe del laboratorio)',
+  ANULACION: 'Anulación del sticker',
 };
 
 type Tx = Prisma.TransactionClient;

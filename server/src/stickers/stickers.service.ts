@@ -1,8 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { EstadoSticker, Prisma } from '@prisma/client';
 import { AuditoriaService } from '../auditoria/auditoria.service';
 import { Ctx } from '../common/sesion';
-import { ETAPAS_LAB, ORDEN_ESTADO } from '../common/dominio';
+import { ORDEN_ESTADO } from '../common/dominio';
 import { PATRON_CODIGO, codigoSticker, normalizarCodigo } from '../cripto/cripto';
 import { CriptoService } from '../cripto/cripto.service';
 import { CustodiaService } from '../custodia/custodia.service';
@@ -74,51 +74,66 @@ export class StickersService {
     return this.lote(lote.id);
   }
 
+  // Solo se eliminan stickers sin uso: estado NUEVO, sin persona y sin anular. Su único evento de
+  // custodia es la fabricación, que el trigger de la base permite borrar solo en ese caso.
+  private sinUso(s: { estado: string; personaId: string | null; anuladoEn: Date | null }) {
+    return s.estado === 'NUEVO' && !s.personaId && !s.anuladoEn;
+  }
+
   async eliminarLote(id: string, ctx: Ctx) {
     const lote = await this.prisma.lote.findUnique({
       where: { id },
-      select: { id: true, codigo: true, stickers: { select: { id: true, personaId: true } } },
+      select: { id: true, codigo: true, stickers: { select: { id: true, estado: true, personaId: true, anuladoEn: true } } },
     });
     if (!lote) throw new NotFoundException('El lote no existe.');
+    const usados = lote.stickers.filter((s) => !this.sinUso(s)).length;
+    if (usados) {
+      throw new ConflictException(
+        `El lote tiene ${usados} sticker${usados > 1 ? 's' : ''} en uso. Solo se eliminan lotes sin uso; los stickers con datos se anulan uno a uno.`,
+      );
+    }
     await this.prisma.$transaction(async (tx) => {
-      await this.borrarStickers(tx, lote.stickers.map((s) => s.id));
+      await this.borrarSinUso(tx, lote.stickers.map((s) => s.id));
       await tx.lote.delete({ where: { id } });
     });
-    await this.auditoria.registrar(ctx, 'ELIMINAR_LOTE', {
-      recurso: lote.codigo,
-      detalle: { stickers: lote.stickers.length, personasConservadas: new Set(lote.stickers.map((s) => s.personaId).filter(Boolean)).size },
-    });
+    await this.auditoria.registrar(ctx, 'ELIMINAR_LOTE', { recurso: lote.codigo, detalle: { stickers: lote.stickers.length } });
     return { ok: true as const, codigo: lote.codigo };
   }
 
   async eliminarSticker(codigo: string, ctx: Ctx) {
-    const sticker = await this.prisma.sticker.findUnique({
+    const s = await this.prisma.sticker.findUnique({
       where: { codigo: normalizarCodigo(codigo) },
-      select: { id: true, codigo: true, personaId: true },
+      select: { id: true, codigo: true, estado: true, personaId: true, anuladoEn: true },
     });
-    if (!sticker) throw new NotFoundException('El sticker no existe.');
-    await this.prisma.$transaction((tx) => this.borrarStickers(tx, [sticker.id]));
-    await this.auditoria.registrar(ctx, 'ELIMINAR_STICKER', { recurso: sticker.codigo, detalle: { personaConservada: Boolean(sticker.personaId) } });
-    return { ok: true as const, codigo: sticker.codigo };
+    if (!s) throw new NotFoundException('El sticker no existe.');
+    if (!this.sinUso(s)) {
+      throw new ConflictException('Este sticker tiene datos (persona, toma o resultados): no se puede eliminar. Puedes anularlo; su registro y su custodia se conservan.');
+    }
+    await this.prisma.$transaction((tx) => this.borrarSinUso(tx, [s.id]));
+    await this.auditoria.registrar(ctx, 'ELIMINAR_STICKER', { recurso: s.codigo });
+    return { ok: true as const, codigo: s.codigo };
   }
 
-  // Borra el sticker y lo que cuelga de él. La persona y su consentimiento se conservan.
-  private async borrarStickers(tx: Tx, ids: string[]) {
+  private async borrarSinUso(tx: Tx, ids: string[]) {
     if (!ids.length) return;
-    await tx.$executeRaw`SELECT set_config('trazagen.borrar_lote', '1', true)`;
-    const huellas = await tx.huella.findMany({ where: { stickerId: { in: ids } }, select: { id: true } });
-    const huellaIds = huellas.map((h) => h.id);
-    if (huellaIds.length) {
-      await tx.coincidenciaHuella.deleteMany({ where: { OR: [{ huellaId: { in: huellaIds } }, { candidataId: { in: huellaIds } }] } });
-      await tx.huella.deleteMany({ where: { id: { in: huellaIds } } });
-    }
-    await tx.perfilGenetico.deleteMany({ where: { stickerId: { in: ids } } });
-    await tx.archivoAdjunto.deleteMany({ where: { stickerId: { in: ids } } });
-    await tx.tomaMuestra.deleteMany({ where: { stickerId: { in: ids } } });
-    await tx.muestraBiologica.deleteMany({ where: { stickerId: { in: ids } } });
-    await tx.vinculoDactilogenetico.deleteMany({ where: { stickerId: { in: ids } } });
+    // Si alguno tuviera otros eventos o datos, el trigger de custodia rechaza el DELETE y la transacción se revierte.
     await tx.eventoCustodia.deleteMany({ where: { stickerId: { in: ids } } });
     await tx.sticker.deleteMany({ where: { id: { in: ids } } });
+  }
+
+  // Un sticker con datos no se borra: se anula. El vínculo vigente se revoca y queda un evento en la custodia.
+  async anularSticker(codigo: string, motivo: string, ctx: Ctx) {
+    const s = await this.prisma.sticker.findUnique({ where: { codigo: normalizarCodigo(codigo) }, select: { id: true, codigo: true, anuladoEn: true } });
+    if (!s) throw new NotFoundException('El sticker no existe.');
+    if (s.anuladoEn) throw new ConflictException('El sticker ya está anulado.');
+    const fecha = ctx.fecha ?? new Date();
+    await this.prisma.$transaction(async (tx) => {
+      const revocados = await tx.vinculoDactilogenetico.updateMany({ where: { stickerId: s.id, estado: 'VIGENTE' }, data: { estado: 'REVOCADO', revocadoEn: fecha } });
+      await tx.sticker.update({ where: { id: s.id }, data: { anuladoEn: fecha, motivoAnulacion: motivo.trim() } });
+      await this.custodia.agregar(tx, { stickerId: s.id, tipo: 'ANULACION', ctx, detalle: { motivo: motivo.trim(), vinculosRevocados: revocados.count } });
+    });
+    await this.auditoria.registrar(ctx, 'ANULAR_STICKER', { recurso: s.codigo });
+    return { ok: true as const, codigo: s.codigo };
   }
 
   async lotes() {
@@ -165,7 +180,7 @@ export class StickersService {
         persona: { select: { id: true } },
         _count: { select: { huellas: true } },
         perfil: { select: { id: true } },
-        muestra: { select: { codigo: true, etapaActual: true } },
+        eventos: { where: { tipo: 'ENVIO' }, select: { id: true }, take: 1 },
         vinculos: { where: { estado: 'VIGENTE' }, select: { id: true } },
       },
     });
@@ -184,8 +199,8 @@ export class StickersService {
         tienePersona: Boolean(s.persona),
         huellas: s._count.huellas,
         tienePerfil: Boolean(s.perfil),
-        muestra: s.muestra?.codigo ?? null,
-        etapa: s.muestra?.etapaActual ?? null,
+        enviado: s.eventos.length > 0,
+        anulado: Boolean(s.anuladoEn),
         vinculado: s.vinculos.length > 0,
         actualizado: s.updatedAt,
       })),
@@ -200,15 +215,15 @@ export class StickersService {
   }
 
   // Recalcula el estado del ciclo de vida a partir de los hechos registrados. Nunca retrocede.
+  // El laboratorio es externo: «En uso» = llegó el perfil (ADN extraído) y queda material.
   async actualizarEstado(tx: Tx, stickerId: string) {
     const s = await tx.sticker.findUniqueOrThrow({
       where: { id: stickerId },
-      include: { toma: { select: { id: true } }, muestra: true, _count: { select: { huellas: true } } },
+      include: { toma: { select: { id: true } }, perfil: { select: { materialRestante: true } }, _count: { select: { huellas: true } } },
     });
     let nuevo: EstadoSticker = 'NUEVO';
     if (s.toma && s._count.huellas > 0) nuevo = 'PROCESADO';
-    if (s.muestra && ETAPAS_LAB.indexOf(s.muestra.etapaActual) >= ETAPAS_LAB.indexOf('EXTRACCION')) nuevo = 'EN_USO';
-    if (s.muestra && !s.muestra.materialRestante) nuevo = 'FINALIZADO';
+    if (s.perfil) nuevo = s.perfil.materialRestante ? 'EN_USO' : 'FINALIZADO';
     if (ORDEN_ESTADO.indexOf(nuevo) > ORDEN_ESTADO.indexOf(s.estado)) {
       await tx.sticker.update({ where: { id: stickerId }, data: { estado: nuevo } });
     }
@@ -245,7 +260,7 @@ export class StickersService {
     }
     const s = await this.prisma.sticker.findUnique({
       where: { codigo },
-      select: { id: true, codigo: true, estado: true, personaId: true },
+      select: { id: true, codigo: true, estado: true, personaId: true, anuladoEn: true },
     });
     if (!s) return falso('El código no corresponde a ningún sticker fabricado por TrazaGen.');
 
@@ -258,6 +273,7 @@ export class StickersService {
       codigo: s.codigo,
       estado: s.estado,
       vinculado: Boolean(s.personaId),
+      anulado: Boolean(s.anuladoEn),
       firmaVerificada: firma !== null,
     };
   }

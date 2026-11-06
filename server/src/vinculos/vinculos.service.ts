@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { AuditoriaService } from '../auditoria/auditoria.service';
-import { DEDOS } from '../common/dominio';
+import { DEDOS, exigirVigente } from '../common/dominio';
 import { Ctx } from '../common/sesion';
 import { jsonCanonico, sha256 } from '../cripto/cripto';
 import { CriptoService } from '../cripto/cripto.service';
@@ -47,6 +47,7 @@ export class VinculosService {
   // El vínculo es un documento canónico firmado con Ed25519: sticker + persona + hashes de huellas + hash del perfil.
   async firmar(codigo: string, ctx: Ctx) {
     const s = await this.datos(codigo);
+    exigirVigente(s);
     if (!s.personaId) throw new BadRequestException('El sticker no tiene una persona asociada.');
     if (!s.huellas.length) throw new BadRequestException('El sticker no tiene huellas digitalizadas.');
     if (!s.perfil) throw new BadRequestException('El sticker no tiene un perfil genético cargado.');

@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { Persona, Prisma, Rol } from '@prisma/client';
 import { AuditoriaService } from '../auditoria/auditoria.service';
 import { bytes } from '../common/archivos';
+import { exigirVigente } from '../common/dominio';
 import { DEDOS, ocultaDocumento, puedeVerDocumentoCompleto } from '../common/dominio';
 import { Ctx } from '../common/sesion';
 import { CriptoService } from '../cripto/cripto.service';
@@ -126,6 +127,7 @@ export class PersonasService {
   // Un sticker se vincula una sola vez. Un segundo intento se bloquea y queda en auditoría.
   async asociar(codigo: string, dto: { personaId?: string; nueva?: PersonaDto }, ctx: Ctx) {
     const s = await this.stickers.porCodigo(codigo);
+    exigirVigente(s);
     if (s.personaId) {
       await this.auditoria.registrar(ctx, 'INTENTO_REVINCULAR_STICKER', { recurso: s.codigo, exito: false });
       throw new ConflictException('Este sticker ya está vinculado a una persona. Un sticker se vincula una sola vez.');
@@ -149,6 +151,7 @@ export class PersonasService {
 
   async consentimiento(codigo: string, dto: ConsentimientoDto, archivo: { nombre: string; datos: Buffer }, ctx: Ctx) {
     const s = await this.stickers.porCodigo(codigo);
+    exigirVigente(s);
     if (!s.personaId) throw new BadRequestException('Primero asocia una persona al sticker.');
     const hash = sha256(archivo.datos);
     const c = await this.prisma.consentimiento.create({
@@ -173,6 +176,7 @@ export class PersonasService {
       include: { toma: true, lote: { include: { plantilla: true } }, huellas: { select: { posicion: true } } },
     });
     if (!s) throw new NotFoundException('No existe un sticker con ese código.');
+    exigirVigente(s);
     if (!s.personaId) throw new BadRequestException('Primero asocia una persona al sticker.');
     if (s.toma) throw new ConflictException('La toma de este sticker ya fue registrada.');
     const posiciones = s.lote.plantilla.posiciones;
@@ -216,10 +220,14 @@ export class PersonasService {
   }
 
   async envio(codigo: string, dto: EnvioDto, ctx: Ctx) {
-    const s = await this.prisma.sticker.findUnique({ where: { codigo }, include: { toma: true, muestra: true } });
+    const s = await this.prisma.sticker.findUnique({
+      where: { codigo },
+      include: { toma: true, _count: { select: { huellas: true } }, eventos: { where: { tipo: 'ENVIO' }, select: { id: true }, take: 1 } },
+    });
     if (!s) throw new NotFoundException('No existe un sticker con ese código.');
-    if (!s.toma) throw new BadRequestException('Registra la toma antes de enviar el sticker.');
-    if (s.muestra) throw new ConflictException('El laboratorio ya recibió este sticker.');
+    exigirVigente(s);
+    if (!s.toma || !s._count.huellas) throw new BadRequestException('Registra la toma y al menos una huella antes de enviar el sticker al laboratorio.');
+    if (s.eventos.length) throw new ConflictException('El envío de este sticker al laboratorio ya fue registrado.');
     await this.custodia.agregarSolo({
       stickerId: s.id,
       tipo: 'ENVIO',

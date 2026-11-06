@@ -30,3 +30,10 @@ export class ResolverQrDto {
   @MaxLength(400)
   texto!: string;
 }
+
+export class AnularDto {
+  @IsString()
+  @MinLength(5, { message: 'Indica el motivo de la anulación (mínimo 5 caracteres).' })
+  @MaxLength(300)
+  motivo!: string;
+}

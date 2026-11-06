@@ -3,7 +3,7 @@ import { OrigenHuella, Prisma } from '@prisma/client';
 import { AfisService } from '../afis/afis.service';
 import { AuditoriaService } from '../auditoria/auditoria.service';
 import { bytes, tipoImagen } from '../common/archivos';
-import { DEDOS } from '../common/dominio';
+import { DEDOS, exigirVigente } from '../common/dominio';
 import { Ctx } from '../common/sesion';
 import { sha256 } from '../cripto/cripto';
 import { CustodiaService } from '../custodia/custodia.service';
@@ -31,8 +31,9 @@ export class HuellasService {
 
   // Busca una plantilla contra todas las huellas registradas (1:N real en SourceAFIS).
   async buscar(plantilla: Buffer, excluirStickerId?: string) {
+    // Las huellas de stickers anulados no participan de la búsqueda.
     const candidatas = await this.prisma.huella.findMany({
-      where: excluirStickerId ? { stickerId: { not: excluirStickerId } } : {},
+      where: { sticker: { anuladoEn: null }, ...(excluirStickerId ? { stickerId: { not: excluirStickerId } } : {}) },
       select: { id: true, plantilla: true },
     });
     const r = await this.afis.identificar(
@@ -79,6 +80,7 @@ export class HuellasService {
       include: { lote: { include: { plantilla: true } }, toma: true, huellas: { select: { posicion: true } } },
     });
     if (!s) throw new NotFoundException('No existe un sticker con ese código.');
+    exigirVigente(s);
     if (!s.personaId) throw new BadRequestException('Primero asocia una persona al sticker.');
     if (!s.lote.plantilla.posiciones.includes(p.posicion)) {
       throw new BadRequestException(`${DEDOS[p.posicion] ?? 'Esa posición'} no está en la plantilla de este sticker.`);

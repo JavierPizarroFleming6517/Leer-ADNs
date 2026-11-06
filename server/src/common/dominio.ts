@@ -1,4 +1,5 @@
-import { EstadoSticker, Rol, TipoEvento } from '@prisma/client';
+import { ConflictException } from '@nestjs/common';
+import { EstadoSticker, Rol } from '@prisma/client';
 
 // ANSI/NIST-ITL: códigos de posición de dedo.
 export const DEDOS: Record<number, string> = {
@@ -14,19 +15,16 @@ export const DEDOS: Record<number, string> = {
   10: 'Meñique izquierdo',
 };
 
+// Ciclo de vida del sticker (documento de la genetista), con el laboratorio como actor externo:
+// NUEVO → PROCESADO (toma y huellas) → EN_USO (llegó el perfil; queda material) → FINALIZADO (sin material).
 export const ORDEN_ESTADO: EstadoSticker[] = ['NUEVO', 'PROCESADO', 'EN_USO', 'FINALIZADO'];
-
-export const ETAPAS_LAB: TipoEvento[] = [
-  'RECEPCION_LAB',
-  'EXTRACCION',
-  'CUANTIFICACION',
-  'AMPLIFICACION',
-  'ELECTROFORESIS',
-  'INTERPRETACION',
-  'PERFIL_CARGADO',
-];
 
 // Qué ve cada rol del expediente.
 export const puedeVerAlelos = (r: Rol) => r === 'ADMIN' || r === 'LABORATORIO';
 export const puedeVerDocumentoCompleto = (r: Rol) => r === 'ADMIN';
 export const ocultaDocumento = (r: Rol) => r === 'LABORATORIO';
+
+// Un sticker anulado queda solo de lectura.
+export function exigirVigente(s: { anuladoEn: Date | null; codigo?: string }) {
+  if (s.anuladoEn) throw new ConflictException('Este sticker está anulado: su registro se conserva, pero ya no admite cambios.');
+}
