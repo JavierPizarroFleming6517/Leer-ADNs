@@ -90,7 +90,13 @@ export class LaboratorioService {
     try {
       muestra = muestraDelArchivo(leido, s.codigo);
     } catch (e) {
-      return rechazar((e as Error).message, { muestrasEnArchivo: leido.muestras.map((m) => m.codigoMuestra).slice(0, 20) });
+      // Si el archivo es el resultado de otro sticker registrado, se dice cuál, para cargarlo donde corresponde.
+      const otros = await this.prisma.sticker.findMany({
+        where: { codigo: { in: leido.muestras.map((m) => m.codigoMuestra.trim().toUpperCase()).slice(0, 20) } },
+        select: { codigo: true },
+      });
+      const pista = otros.length ? ` Este archivo es el resultado del sticker ${otros.map((o) => o.codigo).join(', ')}: súbelo en ese sticker.` : '';
+      return rechazar((e as Error).message + pista, { muestrasEnArchivo: leido.muestras.map((m) => m.codigoMuestra).slice(0, 20) });
     }
     const kit = await this.prisma.kit.findUnique({ where: { nombre: opciones.kit } });
     if (!kit) return rechazar('El kit no está registrado.');
