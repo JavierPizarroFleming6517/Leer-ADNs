@@ -124,17 +124,19 @@ export function Manos({
   onArchivo: (pos: number, f: File) => void;
   onSeleccionar: (pos: number) => void;
 }) {
+  // Solo se dibujan las manos que tienen casillas en la plantilla del sticker.
   const manos = [
     { nombre: 'Mano izquierda', espejo: true, pos: [6, 7, 8, 9, 10] },
     { nombre: 'Mano derecha', espejo: false, pos: [1, 2, 3, 4, 5] },
-  ];
+  ].filter((m) => m.pos.some((p) => posiciones.includes(p)));
+  const una = manos.length === 1;
   return (
-    <div className="grid gap-6 sm:grid-cols-2">
+    <div className={`grid gap-6 ${una ? 'mx-auto max-w-[360px]' : 'sm:grid-cols-2'}`}>
       {manos.map((m) => {
         const incluida = m.pos.some((p) => posiciones.includes(p));
         return (
           <div key={m.nombre} className={`flex flex-col items-center ${incluida ? '' : 'opacity-40'}`}>
-            <div className="relative w-full max-w-[300px]" style={{ aspectRatio: `${W} / ${H}` }}>
+            <div className={`relative w-full ${una ? 'max-w-[360px]' : 'max-w-[300px]'}`} style={{ aspectRatio: `${W} / ${H}` }}>
               <svg viewBox={`0 0 ${W} ${H}`} className="absolute inset-0 h-full w-full" aria-hidden="true">
                 <g transform={m.espejo ? `translate(${W} 0) scale(-1 1)` : undefined} fill="#E7F1F8" stroke="#D6EEF9" strokeWidth="2">
                   {DERECHA.map((d) => (
@@ -166,7 +168,7 @@ export function Manos({
             </div>
             <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-ink-mute">
               {m.nombre}
-              {incluida ? '' : ' · no incluida en la plantilla'}
+              {una ? ` · plantilla de ${posiciones.length} dedos` : ''}
             </p>
           </div>
         );

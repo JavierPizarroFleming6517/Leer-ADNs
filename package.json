@@ -12,7 +12,8 @@
     "test:e2e": "node e2e/guion.mjs"
   },
   "devDependencies": {
-    "concurrently": "^9.1.2"
+    "concurrently": "^9.1.2",
+    "playwright": "1.63.0"
   },
   "engines": {
     "node": ">=20"

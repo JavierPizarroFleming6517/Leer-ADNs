@@ -119,7 +119,7 @@ function Layout({ children }: { children: ReactNode }) {
   );
 
   return (
-    <div className="min-h-screen lg:pl-64">
+    <div className="min-h-screen lg:bg-[linear-gradient(to_right,#0B2F45_16rem,#F4F8FB_16rem)] lg:pl-64">
       <aside className="no-imprimir fixed inset-y-0 left-0 z-30 hidden w-64 lg:block">{lateral}</aside>
       {menu ? (
         <div className="no-imprimir fixed inset-0 z-40 lg:hidden" onClick={() => setMenu(false)}>
@@ -141,6 +141,9 @@ function Layout({ children }: { children: ReactNode }) {
           <Servicios salud={salud} />
           {usuario ? (
             <div className="flex items-center gap-3 border-l border-line pl-3">
+              <div className="sm:hidden">
+                <ChipRol rol={usuario.rol} />
+              </div>
               <div className="hidden text-right leading-tight sm:block">
                 <p className="text-sm font-semibold" data-testid="usuario-actual">{usuario.nombre}</p>
                 <div className="mt-0.5">

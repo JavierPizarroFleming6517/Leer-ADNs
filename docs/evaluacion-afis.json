@@ -1,0 +1,322 @@
+{
+  "fecha": "2026-11-06T01:57:05.781Z",
+  "umbral": 40,
+  "imagenes": 320,
+  "minucias": {
+    "min": 10,
+    "mediana": 28,
+    "max": 65
+  },
+  "genuinos": {
+    "pares": 280,
+    "sobreUmbral": 226,
+    "porcentaje": 80.7,
+    "mediana": 102.21,
+    "minimo": 0,
+    "porDb": {
+      "DB1_B": {
+        "dpi": 500,
+        "sobreUmbral": 65,
+        "total": 70,
+        "porcentaje": 92.9
+      },
+      "DB2_B": {
+        "dpi": 569,
+        "sobreUmbral": 66,
+        "total": 70,
+        "porcentaje": 94.3
+      },
+      "DB3_B": {
+        "dpi": 500,
+        "sobreUmbral": 44,
+        "total": 70,
+        "porcentaje": 62.9
+      },
+      "DB4_B": {
+        "dpi": 500,
+        "sobreUmbral": 51,
+        "total": 70,
+        "porcentaje": 72.9
+      }
+    }
+  },
+  "impostores": {
+    "pares": 1560,
+    "sobreUmbral": 0,
+    "porcentaje": 0,
+    "maximo": 24.07,
+    "mediana": 1.56
+  },
+  "genuinosBajoUmbral": [
+    {
+      "par": "DB3_B/108_1 vs 108_3",
+      "db": "DB3_B",
+      "puntaje": 0
+    },
+    {
+      "par": "DB4_B/108_1 vs 108_3",
+      "db": "DB4_B",
+      "puntaje": 0
+    },
+    {
+      "par": "DB3_B/108_1 vs 108_6",
+      "db": "DB3_B",
+      "puntaje": 1.11
+    },
+    {
+      "par": "DB3_B/105_1 vs 105_8",
+      "db": "DB3_B",
+      "puntaje": 2.05
+    },
+    {
+      "par": "DB3_B/110_1 vs 110_4",
+      "db": "DB3_B",
+      "puntaje": 2.06
+    },
+    {
+      "par": "DB4_B/110_1 vs 110_5",
+      "db": "DB4_B",
+      "puntaje": 2.35
+    },
+    {
+      "par": "DB3_B/105_1 vs 105_6",
+      "db": "DB3_B",
+      "puntaje": 2.66
+    },
+    {
+      "par": "DB3_B/108_1 vs 108_7",
+      "db": "DB3_B",
+      "puntaje": 2.76
+    },
+    {
+      "par": "DB4_B/108_1 vs 108_5",
+      "db": "DB4_B",
+      "puntaje": 2.76
+    },
+    {
+      "par": "DB3_B/105_1 vs 105_5",
+      "db": "DB3_B",
+      "puntaje": 3.64
+    },
+    {
+      "par": "DB2_B/109_1 vs 109_8",
+      "db": "DB2_B",
+      "puntaje": 3.94
+    },
+    {
+      "par": "DB3_B/108_1 vs 108_2",
+      "db": "DB3_B",
+      "puntaje": 4.85
+    },
+    {
+      "par": "DB3_B/110_1 vs 110_3",
+      "db": "DB3_B",
+      "puntaje": 4.92
+    },
+    {
+      "par": "DB4_B/110_1 vs 110_4",
+      "db": "DB4_B",
+      "puntaje": 6.45
+    },
+    {
+      "par": "DB3_B/106_1 vs 106_7",
+      "db": "DB3_B",
+      "puntaje": 7
+    },
+    {
+      "par": "DB3_B/108_1 vs 108_5",
+      "db": "DB3_B",
+      "puntaje": 7.61
+    },
+    {
+      "par": "DB3_B/105_1 vs 105_7",
+      "db": "DB3_B",
+      "puntaje": 8.06
+    },
+    {
+      "par": "DB4_B/109_1 vs 109_4",
+      "db": "DB4_B",
+      "puntaje": 8.78
+    },
+    {
+      "par": "DB4_B/108_1 vs 108_6",
+      "db": "DB4_B",
+      "puntaje": 9.12
+    },
+    {
+      "par": "DB3_B/105_1 vs 105_3",
+      "db": "DB3_B",
+      "puntaje": 9.28
+    },
+    {
+      "par": "DB3_B/105_1 vs 105_2",
+      "db": "DB3_B",
+      "puntaje": 10.77
+    },
+    {
+      "par": "DB4_B/110_1 vs 110_3",
+      "db": "DB4_B",
+      "puntaje": 11.9
+    },
+    {
+      "par": "DB3_B/109_1 vs 109_7",
+      "db": "DB3_B",
+      "puntaje": 12.21
+    },
+    {
+      "par": "DB3_B/105_1 vs 105_4",
+      "db": "DB3_B",
+      "puntaje": 12.36
+    },
+    {
+      "par": "DB4_B/106_1 vs 106_4",
+      "db": "DB4_B",
+      "puntaje": 13.41
+    },
+    {
+      "par": "DB4_B/109_1 vs 109_6",
+      "db": "DB4_B",
+      "puntaje": 14.18
+    },
+    {
+      "par": "DB1_B/109_1 vs 109_6",
+      "db": "DB1_B",
+      "puntaje": 15.24
+    },
+    {
+      "par": "DB4_B/109_1 vs 109_7",
+      "db": "DB4_B",
+      "puntaje": 16.66
+    },
+    {
+      "par": "DB2_B/110_1 vs 110_6",
+      "db": "DB2_B",
+      "puntaje": 17.67
+    },
+    {
+      "par": "DB4_B/110_1 vs 110_8",
+      "db": "DB4_B",
+      "puntaje": 18.08
+    },
+    {
+      "par": "DB4_B/110_1 vs 110_2",
+      "db": "DB4_B",
+      "puntaje": 18.5
+    },
+    {
+      "par": "DB4_B/110_1 vs 110_6",
+      "db": "DB4_B",
+      "puntaje": 19.36
+    },
+    {
+      "par": "DB3_B/108_1 vs 108_8",
+      "db": "DB3_B",
+      "puntaje": 19.86
+    },
+    {
+      "par": "DB3_B/108_1 vs 108_4",
+      "db": "DB3_B",
+      "puntaje": 20.85
+    },
+    {
+      "par": "DB3_B/110_1 vs 110_6",
+      "db": "DB3_B",
+      "puntaje": 21.75
+    },
+    {
+      "par": "DB4_B/110_1 vs 110_7",
+      "db": "DB4_B",
+      "puntaje": 21.87
+    },
+    {
+      "par": "DB2_B/109_1 vs 109_7",
+      "db": "DB2_B",
+      "puntaje": 22.85
+    },
+    {
+      "par": "DB1_B/110_1 vs 110_8",
+      "db": "DB1_B",
+      "puntaje": 24.34
+    },
+    {
+      "par": "DB1_B/103_1 vs 103_5",
+      "db": "DB1_B",
+      "puntaje": 24.56
+    },
+    {
+      "par": "DB3_B/110_1 vs 110_8",
+      "db": "DB3_B",
+      "puntaje": 25.47
+    },
+    {
+      "par": "DB4_B/104_1 vs 104_3",
+      "db": "DB4_B",
+      "puntaje": 25.88
+    },
+    {
+      "par": "DB3_B/102_1 vs 102_5",
+      "db": "DB3_B",
+      "puntaje": 27.25
+    },
+    {
+      "par": "DB4_B/104_1 vs 104_2",
+      "db": "DB4_B",
+      "puntaje": 27.27
+    },
+    {
+      "par": "DB3_B/110_1 vs 110_7",
+      "db": "DB3_B",
+      "puntaje": 28.1
+    },
+    {
+      "par": "DB3_B/110_1 vs 110_5",
+      "db": "DB3_B",
+      "puntaje": 28.28
+    },
+    {
+      "par": "DB1_B/106_1 vs 106_4",
+      "db": "DB1_B",
+      "puntaje": 29.08
+    },
+    {
+      "par": "DB2_B/109_1 vs 109_3",
+      "db": "DB2_B",
+      "puntaje": 29.31
+    },
+    {
+      "par": "DB4_B/109_1 vs 109_5",
+      "db": "DB4_B",
+      "puntaje": 29.86
+    },
+    {
+      "par": "DB4_B/108_1 vs 108_4",
+      "db": "DB4_B",
+      "puntaje": 31.01
+    },
+    {
+      "par": "DB3_B/103_1 vs 103_5",
+      "db": "DB3_B",
+      "puntaje": 31.93
+    },
+    {
+      "par": "DB3_B/101_1 vs 101_6",
+      "db": "DB3_B",
+      "puntaje": 34.46
+    },
+    {
+      "par": "DB1_B/104_1 vs 104_6",
+      "db": "DB1_B",
+      "puntaje": 35.36
+    },
+    {
+      "par": "DB4_B/109_1 vs 109_2",
+      "db": "DB4_B",
+      "puntaje": 36.33
+    },
+    {
+      "par": "DB3_B/101_1 vs 101_4",
+      "db": "DB3_B",
+      "puntaje": 38.82
+    }
+  ]
+}

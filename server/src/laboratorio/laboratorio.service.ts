@@ -7,12 +7,28 @@ import { Ctx } from '../common/sesion';
 import { jsonCanonico, sha256 } from '../cripto/cripto';
 import { CustodiaService, NOMBRE_EVENTO } from '../custodia/custodia.service';
 import { ErrorPerfil, Marcadores, comparar, resumir } from '../genetica/str';
-import { NOMBRE_FORMATO, leerArchivo } from '../genetica/lectores';
+import { ArchivoLeido, NOMBRE_FORMATO, leerArchivo } from '../genetica/lectores';
 import { PrismaService } from '../prisma/prisma.service';
 import { StickersService } from '../stickers/stickers.service';
 import { EtapaDto, RecepcionDto } from './dto/lab.dto';
 
 type Archivo = { nombre: string; datos: Buffer; mime: string };
+
+// Validación de custodia: el archivo debe traer la muestra de este sticker (SPECIMENID o nombre de muestra).
+export function muestraDelArchivo(leido: ArchivoLeido, codigoMuestra: string) {
+  const m = leido.muestras.find((x) => x.codigoMuestra.trim().toUpperCase() === codigoMuestra.toUpperCase());
+  if (!m) {
+    const ids = leido.muestras.map((x) => x.codigoMuestra).slice(0, 5).join(', ');
+    throw new ErrorPerfil(`El archivo corresponde a otra muestra. Contiene ${ids}; se esperaba ${codigoMuestra}, la muestra de este sticker.`);
+  }
+  return m;
+}
+
+// Los loci del archivo deben ser del kit declarado. Devuelve los loci del kit sin dato.
+export function lociFueraDeKit(m: Marcadores, loci: string[]) {
+  const enKit = new Set(loci);
+  return { fuera: Object.keys(m).filter((l) => !enKit.has(l)), faltantes: loci.filter((l) => !m[l]?.length) };
+}
 
 export function sha256Perfil(m: Marcadores): string {
   return sha256(jsonCanonico(m));
@@ -248,14 +264,13 @@ export class LaboratorioService {
   }
 
   validarKit(m: Marcadores, kitNombre: string, loci: string[]) {
-    const enKit = new Set(loci);
-    const fuera = Object.keys(m).filter((l) => !enKit.has(l));
+    const { fuera, faltantes } = lociFueraDeKit(m, loci);
     if (fuera.length) {
       throw new BadRequestException(
         `El archivo contiene loci que el kit ${kitNombre} no amplifica: ${fuera.join(', ')}. Revisa el kit declarado.`,
       );
     }
-    return loci.filter((l) => !m[l]?.length);
+    return faltantes;
   }
 
   async cargarPerfil(codigo: string, archivo: Archivo, kitElegido: string | undefined, ctx: Ctx) {
@@ -279,13 +294,11 @@ export class LaboratorioService {
       throw e;
     }
     // Validación de custodia: el archivo debe ser de la muestra de este sticker.
-    const muestra = leido.muestras.find((m) => m.codigoMuestra.trim().toUpperCase() === s.muestra!.codigo);
-    if (!muestra) {
-      const ids = leido.muestras.map((m) => m.codigoMuestra).slice(0, 5).join(', ');
-      return rechazar(
-        `El archivo corresponde a otra muestra. Contiene ${ids}; se esperaba ${s.muestra.codigo}, la muestra de este sticker.`,
-        { muestrasEnArchivo: leido.muestras.map((m) => m.codigoMuestra).slice(0, 20) },
-      );
+    let muestra;
+    try {
+      muestra = muestraDelArchivo(leido, s.muestra.codigo);
+    } catch (e) {
+      return rechazar((e as Error).message, { muestrasEnArchivo: leido.muestras.map((m) => m.codigoMuestra).slice(0, 20) });
     }
     const kitNombre = s.muestra.kit ?? kitElegido;
     if (!kitNombre) return rechazar('Indica el kit de amplificación para validar los loci del perfil.');

@@ -83,8 +83,8 @@ export default function Escanear() {
             <div className="mt-4 flex gap-2">
               <input
                 value={codigo}
-                onChange={(e) => setCodigo(e.target.value.toUpperCase())}
-                className="input font-mono uppercase tracking-wider"
+                onChange={(e) => setCodigo(e.target.value)}
+                className={`input font-mono tracking-wider ${codigo.includes('/') ? '' : 'uppercase'}`}
                 placeholder="TG-XXXX-XXXX"
                 maxLength={200}
                 data-testid="codigo-manual"

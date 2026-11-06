@@ -174,9 +174,12 @@ function PorHuella() {
               </p>
               <ul className="space-y-2.5">
                 {r.mejores.map((m) => (
-                  <li key={m.huellaId} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_60px] items-center gap-3 text-sm">
-                    <span className="min-w-0 truncate">
-                      <span className="font-semibold">{m.persona?.nombre ?? '—'}</span> <span className="text-xs text-ink-mute">· {m.dedo}</span>
+                  <li key={m.huellaId} className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1.3fr)_56px] items-center gap-3 text-sm">
+                    <span className="min-w-0 leading-tight">
+                      <span className="block truncate font-semibold">{m.persona?.nombre ?? '—'}</span>
+                      <span className="block truncate text-xs text-ink-mute">
+                        {m.dedo} · <span className="font-mono">{m.stickerCodigo}</span>
+                      </span>
                     </span>
                     <span className="relative h-3 rounded-full bg-surface">
                       <span className={`absolute inset-y-0 left-0 rounded-full ${m.coincide ? 'bg-lima-400' : 'bg-celeste-200'}`} style={{ width: `${Math.max(1.5, (m.puntaje / maxPuntaje) * 100)}%` }} />
