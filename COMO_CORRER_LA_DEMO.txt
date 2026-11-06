@@ -141,13 +141,10 @@ Espera a ver estas dos líneas:
 
 Abre en el navegador:   http://localhost:5173
 
-Entra con cualquiera de estos usuarios (la contraseña es la misma
-para los cuatro: la de DEMO_PASSWORD):
+Entra con el usuario de administración (la contraseña es
+DEMO_PASSWORD):
 
-  Camila Rojas          admin@dactygen.cl          Administración
-  Diego Fuentes         operador@dactygen.cl       Operador de toma
-  Dra. Valentina Soto   laboratorio@genlab.cl      Laboratorio
-  Andrés Muñoz          verificador@dactygen.cl    Verificador
+  Camila Rojas          admin@trazagen.cl          Administración
 
 En la pantalla de login basta con hacer clic en el nombre y escribir
 la contraseña.

@@ -33,7 +33,7 @@ export class AuthService {
 
   async usuariosDemo() {
     const us = await this.prisma.usuario.findMany({
-      where: { activo: true },
+      where: { activo: true, rol: 'ADMIN' },
       orderBy: { createdAt: 'asc' },
       select: { nombre: true, email: true, rol: true, institucion: true },
       take: 8,

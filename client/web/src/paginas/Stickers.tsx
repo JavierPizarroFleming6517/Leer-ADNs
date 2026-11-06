@@ -3,8 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { api, descargar, post } from '../api';
 import { useCarga, useSesion } from '../sesion';
 import type { Catalogos } from '../tipos';
-import { NOMBRE_ETAPA } from '../tipos';
-import { Aviso, Cargando, ChipEstado, ESTADOS, Encabezado, Icon, Modal, Spinner, Vacio, fecha, hace, mensaje } from '../ui';
+import { Aviso, Cargando, Encabezado, Icon, Modal, Spinner, Vacio, fecha, hace, mensaje } from '../ui';
 
 type Fila = {
   id: string;
@@ -73,14 +72,16 @@ export default function Stickers() {
 }
 
 function ListaStickers() {
-  const [params] = useSearchParams();
-  const [estado, setEstado] = useState(params.get('estado') ?? '');
+  const { puede } = useSesion();
   const [lote, setLote] = useState('');
   const [pais, setPais] = useState('');
   const [q, setQ] = useState('');
-  const qs = new URLSearchParams({ ...(estado && { estado }), ...(lote && { lote }), ...(pais && { pais }), ...(q && { q }) }).toString();
-  const { datos, cargando, error } = useCarga(() => api<{ items: Fila[]; filtros: { lotes: string[]; paises: string[] } }>(`/stickers?${qs}`), [qs]);
+  const qs = new URLSearchParams({ ...(lote && { lote }), ...(pais && { pais }), ...(q && { q }) }).toString();
+  const { datos, cargando, error, recargar } = useCarga(() => api<{ items: Fila[]; filtros: { lotes: string[]; paises: string[] } }>(`/stickers?${qs}`), [qs]);
   const nav = useNavigate();
+  const [objetivo, setObjetivo] = useState<Fila | null>(null);
+  const [borrando, setBorrando] = useState(false);
+  const [errorBorrar, setErrorBorrar] = useState('');
   return (
     <div className="card overflow-hidden">
       <div className="flex flex-wrap items-center gap-2 border-b border-line p-4">
@@ -88,14 +89,6 @@ function ListaStickers() {
           <Icon.search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-mute" />
           <input className="input pl-9 font-mono uppercase" placeholder="Buscar código" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
-        <select className="input w-auto" value={estado} onChange={(e) => setEstado(e.target.value)} aria-label="Estado">
-          <option value="">Todos los estados</option>
-          {Object.entries(ESTADOS).map(([k, v]) => (
-            <option key={k} value={k}>
-              {v.nombre}
-            </option>
-          ))}
-        </select>
         <select className="input w-auto" value={lote} onChange={(e) => setLote(e.target.value)} aria-label="Lote">
           <option value="">Todos los lotes</option>
           {datos?.filtros.lotes.map((l) => (
@@ -122,11 +115,11 @@ function ListaStickers() {
             <thead className="bg-surface/60">
               <tr>
                 <th>Código</th>
-                <th>Estado</th>
                 <th>Lote</th>
                 <th className="hidden md:table-cell">Plantilla</th>
                 <th>Avance</th>
                 <th className="hidden lg:table-cell">Actualizado</th>
+                {puede('ADMIN') ? <th /> : null}
               </tr>
             </thead>
             <tbody>
@@ -137,21 +130,74 @@ function ListaStickers() {
                       {s.codigo}
                     </Link>
                   </td>
-                  <td>
-                    <ChipEstado estado={s.estado} />
-                  </td>
                   <td className="font-mono text-xs text-ink-soft">{s.lote}</td>
                   <td className="hidden text-xs text-ink-soft md:table-cell">{s.plantilla}</td>
                   <td>
                     <Avance s={s} />
                   </td>
                   <td className="hidden text-xs text-ink-mute lg:table-cell">{hace(s.actualizado)}</td>
+                  {puede('ADMIN') ? (
+                    <td className="text-right">
+                      <button
+                        type="button"
+                        className="btn-secondary btn-sm text-red-700"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setErrorBorrar('');
+                          setObjetivo(s);
+                        }}
+                      >
+                        Eliminar
+                      </button>
+                    </td>
+                  ) : null}
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
+      {objetivo ? (
+        <Modal
+          abierto
+          titulo={`Eliminar ${objetivo.codigo}`}
+          onCerrar={() => {
+            if (!borrando) setObjetivo(null);
+          }}
+        >
+          <p className="text-sm text-ink-soft">
+            Se elimina este sticker, con sus huellas, perfil y vínculo.{objetivo.tienePersona ? ' La persona permanece en Personas; solo deja de estar asociada a este código.' : ''}
+          </p>
+          {errorBorrar ? (
+            <Aviso tono="error" titulo="No se pudo eliminar" className="mt-4">
+              {errorBorrar}
+            </Aviso>
+          ) : null}
+          <div className="mt-5 flex justify-end gap-2">
+            <button type="button" className="btn-secondary" disabled={borrando} onClick={() => setObjetivo(null)}>
+              Cancelar
+            </button>
+            <button
+              type="button"
+              className="btn bg-red-600 text-white hover:bg-red-700"
+              disabled={borrando}
+              onClick={() => {
+                setBorrando(true);
+                setErrorBorrar('');
+                void api(`/stickers/${objetivo.codigo}`, { method: 'DELETE' })
+                  .then(() => {
+                    setObjetivo(null);
+                    recargar();
+                  })
+                  .catch((e: unknown) => setErrorBorrar(mensaje(e)))
+                  .finally(() => setBorrando(false));
+              }}
+            >
+              {borrando ? <Spinner /> : null} Eliminar sticker
+            </button>
+          </div>
+        </Modal>
+      ) : null}
     </div>
   );
 }
@@ -160,7 +206,6 @@ function Avance({ s }: { s: Fila }) {
   const pasos = [
     { ok: s.tienePersona, t: 'Persona', i: Icon.user },
     { ok: s.huellas > 0, t: `${s.huellas} huellas`, i: Icon.fingerprint },
-    { ok: Boolean(s.muestra), t: s.etapa ? `Laboratorio: ${NOMBRE_ETAPA[s.etapa]}` : 'Laboratorio', i: Icon.flask },
     { ok: s.tienePerfil, t: 'Perfil genético', i: Icon.dna },
     { ok: s.vinculado, t: 'Vínculo firmado', i: Icon.shield },
   ];
@@ -176,8 +221,11 @@ function Avance({ s }: { s: Fila }) {
 }
 
 function ListaLotes() {
-  const { datos, cargando } = useCarga(() => api<Lote[]>('/lotes'));
+  const { datos, cargando, recargar } = useCarga(() => api<Lote[]>('/lotes'));
   const { puede } = useSesion();
+  const [objetivo, setObjetivo] = useState<Lote | null>(null);
+  const [borrando, setBorrando] = useState(false);
+  const [errorBorrar, setErrorBorrar] = useState('');
   if (cargando && !datos) return <Cargando />;
   if (!datos?.length) return <Vacio titulo="Aún no hay lotes" />;
   return (
@@ -205,17 +253,7 @@ function ListaLotes() {
               <dd className="font-semibold">{l.fabrica}</dd>
             </div>
           </dl>
-          <div className="mt-4 flex h-2 overflow-hidden rounded-full bg-surface">
-            {Object.entries(l.porEstado).map(([e, n]) => (n ? <div key={e} className={ESTADOS[e].punto} style={{ width: `${(n / l.cantidad) * 100}%` }} title={`${ESTADOS[e].nombre}: ${n}`} /> : null))}
-          </div>
-          <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-ink-mute">
-            {Object.entries(l.porEstado).map(([e, n]) => (
-              <span key={e} className="flex items-center gap-1">
-                <span className={`h-1.5 w-1.5 rounded-full ${ESTADOS[e].punto}`} /> {ESTADOS[e].nombre} {n}
-              </span>
-            ))}
-          </div>
-          <div className="mt-5 flex gap-2 border-t border-line pt-4">
+          <div className="mt-5 flex flex-wrap gap-2 border-t border-line pt-4">
             <Link to={`/lotes/${l.id}/etiquetas`} className="btn-secondary btn-sm flex-1">
               <Icon.printer className="h-4 w-4" /> Etiquetas QR
             </Link>
@@ -224,9 +262,62 @@ function ListaLotes() {
                 <Icon.download className="h-4 w-4" /> CSV fábrica
               </button>
             ) : null}
+            {puede('ADMIN') ? (
+              <button
+                type="button"
+                className="btn-secondary btn-sm flex-1 text-red-700"
+                onClick={() => {
+                  setErrorBorrar('');
+                  setObjetivo(l);
+                }}
+              >
+                Eliminar
+              </button>
+            ) : null}
           </div>
         </div>
       ))}
+      {objetivo ? (
+        <Modal
+          abierto
+          titulo={`Eliminar ${objetivo.codigo}`}
+          onCerrar={() => {
+            if (!borrando) setObjetivo(null);
+          }}
+        >
+          <p className="text-sm text-ink-soft">
+            Se elimina el lote y {objetivo.cantidad === 1 ? 'su sticker' : `sus ${objetivo.cantidad} stickers`}, con huellas, perfil y vínculo. La persona asociada, si la hay, permanece en Personas.
+          </p>
+          {errorBorrar ? (
+            <Aviso tono="error" titulo="No se pudo eliminar" className="mt-4">
+              {errorBorrar}
+            </Aviso>
+          ) : null}
+          <div className="mt-5 flex justify-end gap-2">
+            <button type="button" className="btn-secondary" disabled={borrando} onClick={() => setObjetivo(null)}>
+              Cancelar
+            </button>
+            <button
+              type="button"
+              className="btn bg-red-600 text-white hover:bg-red-700"
+              disabled={borrando}
+              onClick={() => {
+                setBorrando(true);
+                setErrorBorrar('');
+                void api(`/lotes/${objetivo.id}`, { method: 'DELETE' })
+                  .then(() => {
+                    setObjetivo(null);
+                    recargar();
+                  })
+                  .catch((e: unknown) => setErrorBorrar(mensaje(e)))
+                  .finally(() => setBorrando(false));
+              }}
+            >
+              {borrando ? <Spinner /> : null} Eliminar lote
+            </button>
+          </div>
+        </Modal>
+      ) : null}
     </div>
   );
 }

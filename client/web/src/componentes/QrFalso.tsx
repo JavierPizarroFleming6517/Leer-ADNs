@@ -18,11 +18,11 @@ export function QrFalso({ motivo, codigo, onReintentar }: { motivo: string; codi
         <div className="mt-8 flex flex-wrap justify-center gap-3">
           {onReintentar ? (
             <button type="button" onClick={onReintentar} className="btn bg-white text-red-700 hover:bg-red-50">
-              <Icon.scan className="h-4 w-4" /> Escanear otro código
+              <Icon.scan className="h-4 w-4" /> Verificar otro código
             </button>
           ) : (
-            <Link to="/escanear" className="btn bg-white text-red-700 hover:bg-red-50">
-              <Icon.scan className="h-4 w-4" /> Escanear otro código
+            <Link to="/verificacion?modo=qr" className="btn bg-white text-red-700 hover:bg-red-50">
+              <Icon.scan className="h-4 w-4" /> Verificar otro código
             </Link>
           )}
         </div>

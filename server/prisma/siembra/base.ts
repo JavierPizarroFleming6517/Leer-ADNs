@@ -31,10 +31,10 @@ export const PLANTILLAS = [
 ];
 
 export const USUARIOS: { clave: string; nombre: string; email: string; rol: Rol; institucion: string }[] = [
-  { clave: 'admin', nombre: 'Camila Rojas', email: 'admin@dactygen.cl', rol: 'ADMIN', institucion: 'Dactygen' },
-  { clave: 'operador', nombre: 'Diego Fuentes', email: 'operador@dactygen.cl', rol: 'OPERADOR_TOMA', institucion: 'Dactygen · Unidad de toma' },
+  { clave: 'admin', nombre: 'Camila Rojas', email: 'admin@trazagen.cl', rol: 'ADMIN', institucion: 'TrazaGen' },
+  { clave: 'operador', nombre: 'Diego Fuentes', email: 'operador@trazagen.cl', rol: 'OPERADOR_TOMA', institucion: 'TrazaGen · Unidad de toma' },
   { clave: 'laboratorio', nombre: 'Dra. Valentina Soto', email: 'laboratorio@genlab.cl', rol: 'LABORATORIO', institucion: 'GenLab Santiago' },
-  { clave: 'verificador', nombre: 'Andrés Muñoz', email: 'verificador@dactygen.cl', rol: 'VERIFICADOR', institucion: 'Dactygen · Verificación' },
+  { clave: 'verificador', nombre: 'Andrés Muñoz', email: 'verificador@trazagen.cl', rol: 'VERIFICADOR', institucion: 'TrazaGen · Verificación' },
 ];
 
 export async function sembrarBase(prisma: PrismaClient) {
@@ -45,8 +45,8 @@ export async function sembrarBase(prisma: PrismaClient) {
   for (const u of USUARIOS) {
     const r = await prisma.usuario.upsert({
       where: { email: u.email },
-      update: { passwordHash: hash, nombre: u.nombre, rol: u.rol, institucion: u.institucion, activo: true },
-      create: { nombre: u.nombre, email: u.email, rol: u.rol, institucion: u.institucion, passwordHash: hash },
+      update: { passwordHash: hash, nombre: u.nombre, rol: u.rol, institucion: u.institucion, activo: u.rol === 'ADMIN' },
+      create: { nombre: u.nombre, email: u.email, rol: u.rol, institucion: u.institucion, passwordHash: hash, activo: u.rol === 'ADMIN' },
     });
     usuarios[u.clave] = { id: r.id, nombre: r.nombre, email: r.email, rol: r.rol };
   }

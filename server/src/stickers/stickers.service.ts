@@ -74,6 +74,53 @@ export class StickersService {
     return this.lote(lote.id);
   }
 
+  async eliminarLote(id: string, ctx: Ctx) {
+    const lote = await this.prisma.lote.findUnique({
+      where: { id },
+      select: { id: true, codigo: true, stickers: { select: { id: true, personaId: true } } },
+    });
+    if (!lote) throw new NotFoundException('El lote no existe.');
+    await this.prisma.$transaction(async (tx) => {
+      await this.borrarStickers(tx, lote.stickers.map((s) => s.id));
+      await tx.lote.delete({ where: { id } });
+    });
+    await this.auditoria.registrar(ctx, 'ELIMINAR_LOTE', {
+      recurso: lote.codigo,
+      detalle: { stickers: lote.stickers.length, personasConservadas: new Set(lote.stickers.map((s) => s.personaId).filter(Boolean)).size },
+    });
+    return { ok: true as const, codigo: lote.codigo };
+  }
+
+  async eliminarSticker(codigo: string, ctx: Ctx) {
+    const sticker = await this.prisma.sticker.findUnique({
+      where: { codigo: normalizarCodigo(codigo) },
+      select: { id: true, codigo: true, personaId: true },
+    });
+    if (!sticker) throw new NotFoundException('El sticker no existe.');
+    await this.prisma.$transaction((tx) => this.borrarStickers(tx, [sticker.id]));
+    await this.auditoria.registrar(ctx, 'ELIMINAR_STICKER', { recurso: sticker.codigo, detalle: { personaConservada: Boolean(sticker.personaId) } });
+    return { ok: true as const, codigo: sticker.codigo };
+  }
+
+  // Borra el sticker y lo que cuelga de él. La persona y su consentimiento se conservan.
+  private async borrarStickers(tx: Tx, ids: string[]) {
+    if (!ids.length) return;
+    await tx.$executeRaw`SELECT set_config('trazagen.borrar_lote', '1', true)`;
+    const huellas = await tx.huella.findMany({ where: { stickerId: { in: ids } }, select: { id: true } });
+    const huellaIds = huellas.map((h) => h.id);
+    if (huellaIds.length) {
+      await tx.coincidenciaHuella.deleteMany({ where: { OR: [{ huellaId: { in: huellaIds } }, { candidataId: { in: huellaIds } }] } });
+      await tx.huella.deleteMany({ where: { id: { in: huellaIds } } });
+    }
+    await tx.perfilGenetico.deleteMany({ where: { stickerId: { in: ids } } });
+    await tx.archivoAdjunto.deleteMany({ where: { stickerId: { in: ids } } });
+    await tx.tomaMuestra.deleteMany({ where: { stickerId: { in: ids } } });
+    await tx.muestraBiologica.deleteMany({ where: { stickerId: { in: ids } } });
+    await tx.vinculoDactilogenetico.deleteMany({ where: { stickerId: { in: ids } } });
+    await tx.eventoCustodia.deleteMany({ where: { stickerId: { in: ids } } });
+    await tx.sticker.deleteMany({ where: { id: { in: ids } } });
+  }
+
   async lotes() {
     const lotes = await this.prisma.lote.findMany({
       orderBy: { createdAt: 'desc' },

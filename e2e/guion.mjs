@@ -70,7 +70,7 @@ try {
   await anon.goto(`${BASE}/login`);
   await anon.getByTestId('usuarios-demo').waitFor();
   await captura(anon, 'login');
-  const admin = await sesion('admin@dactygen.cl');
+  const admin = await sesion('admin@trazagen.cl');
   await admin.getByText('Posible huella duplicada').first().waitFor();
   await captura(admin, 'inicio_admin_alerta_duplicado', true);
 
@@ -91,11 +91,12 @@ try {
 
   // ---------------------------------------------------------------- 3
   paso('3. Operador: escanear → asociar persona → consentimiento → toma → huellas → duplicado');
-  const op = await sesion('operador@dactygen.cl');
-  await op.goto(`${BASE}/escanear`);
+  const op = await sesion('operador@trazagen.cl');
+  await op.goto(`${BASE}/verificacion?modo=qr`);
   await op.getByTestId('codigo-manual').fill(urlQr);
   await captura(op, 'escanear_qr');
-  await op.getByRole('button', { name: 'Abrir' }).click();
+  await op.getByRole('button', { name: 'Verificar' }).click();
+  await op.getByRole('link', { name: 'Ver expediente' }).click();
   await op.getByText('QR auténtico: firma Ed25519 verificada').waitFor();
   await captura(op, 'ficha_sticker_nuevo_qr_verificado');
   await op.getByTestId('iniciar-toma').click();
@@ -168,7 +169,7 @@ try {
 
   // ---------------------------------------------------------------- 6
   paso('6. Verificación por huella (coincide y sin coincidencias) y por perfil');
-  const ver = await sesion('verificador@dactygen.cl');
+  const ver = await sesion('verificador@trazagen.cl');
   await ver.goto(`${BASE}/verificacion`);
   await ver.getByTestId('subir-huella-verificar').setInputFiles(join(DEMO, 'huella_para_verificar.png'));
   await ver.getByTestId('resultado-coincide').waitFor({ timeout: 30000 });
@@ -200,10 +201,10 @@ try {
   // ---------------------------------------------------------------- 8
   paso('8. Escanear desde el celular el QR de una persona registrada → expediente según rol');
   const codigoRegistrado = asignacion.archivosDemo['perfil_persona_registrada.xml'].sticker;
-  const tok = await (await fetch(`${BASE}/api/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'verificador@dactygen.cl', password: PASSWORD }) })).json();
+  const tok = await (await fetch(`${BASE}/api/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'verificador@trazagen.cl', password: PASSWORD }) })).json();
   const ficha = await (await fetch(`${BASE}/api/stickers/${codigoRegistrado}`, { headers: { Authorization: `Bearer ${tok.accessToken}` } })).json();
   const ruta = new URL(ficha.qrUrl).pathname;
-  const movil = await sesion('verificador@dactygen.cl', { ...devices['iPhone 13'], locale: 'es-CL' });
+  const movil = await sesion('verificador@trazagen.cl', { ...devices['iPhone 13'], locale: 'es-CL' });
   await movil.goto(`${BASE}${ruta}`);
   await movil.getByText('QR auténtico: firma Ed25519 verificada').waitFor();
   await captura(movil, 'celular_expediente_verificador');

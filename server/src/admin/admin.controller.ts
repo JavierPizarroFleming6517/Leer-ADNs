@@ -9,7 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 class UsuarioDto {
   @IsString() @MinLength(2) @MaxLength(120) nombre!: string;
   @IsEmail({}, { message: 'Correo no válido.' }) @MaxLength(200) email!: string;
-  @IsIn(['ADMIN', 'OPERADOR_TOMA', 'LABORATORIO', 'VERIFICADOR'], { message: 'Rol no válido.' }) rol!: Rol;
+  @IsIn(['ADMIN'], { message: 'Solo se puede crear el rol de administrador.' }) rol!: Rol;
   @IsOptional() @IsString() @MaxLength(120) institucion?: string;
   @IsString() @MinLength(10, { message: 'La contraseña debe tener al menos 10 caracteres.' }) @MaxLength(200) password!: string;
 }
@@ -51,6 +51,7 @@ export class AdminController {
   @Get('admin/usuarios')
   usuarios() {
     return this.prisma.usuario.findMany({
+      where: { rol: 'ADMIN' },
       orderBy: { createdAt: 'asc' },
       select: { id: true, nombre: true, email: true, rol: true, institucion: true, activo: true, createdAt: true },
     });

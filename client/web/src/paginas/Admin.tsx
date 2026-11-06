@@ -3,7 +3,7 @@ import { api, post } from '../api';
 import { useCarga, useSesion } from '../sesion';
 import type { Catalogos } from '../tipos';
 import { CODIS_20, DEDOS } from '../tipos';
-import { Aviso, ChipRol, Encabezado, Icon, Modal, ROLES, Spinner, fecha, mensaje } from '../ui';
+import { Aviso, ChipRol, Encabezado, Icon, Modal, Spinner, fecha, mensaje } from '../ui';
 
 type Usuario = { id: string; nombre: string; email: string; rol: string; institucion: string | null; activo: boolean; createdAt: string };
 
@@ -12,7 +12,7 @@ export default function Admin() {
   return (
     <div>
       <Encabezado eyebrow="Configuración" titulo="Administración">
-        Usuarios y roles, plantillas de sticker por país y kits de amplificación con sus loci.
+        Usuarios, plantillas de sticker por país y kits de amplificación con sus loci.
       </Encabezado>
       <div className="mb-5 inline-flex rounded-xl border border-line bg-white p-1">
         {(
@@ -36,7 +36,7 @@ function Usuarios() {
   const { usuario: yo } = useSesion();
   const { datos, recargar } = useCarga(() => api<Usuario[]>('/admin/usuarios'));
   const [nuevo, setNuevo] = useState(false);
-  const [d, setD] = useState({ nombre: '', email: '', rol: 'OPERADOR_TOMA', institucion: '', password: '' });
+  const [d, setD] = useState({ nombre: '', email: '', institucion: '', password: '' });
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(false);
   async function crear(e: FormEvent) {
@@ -44,9 +44,9 @@ function Usuarios() {
     setCargando(true);
     setError('');
     try {
-      await post('/admin/usuarios', { ...d, ...(d.institucion ? {} : { institucion: undefined }) });
+      await post('/admin/usuarios', { ...d, rol: 'ADMIN', ...(d.institucion ? {} : { institucion: undefined }) });
       setNuevo(false);
-      setD({ nombre: '', email: '', rol: 'OPERADOR_TOMA', institucion: '', password: '' });
+      setD({ nombre: '', email: '', institucion: '', password: '' });
       recargar();
     } catch (err) {
       setError(mensaje(err));
@@ -79,7 +79,7 @@ function Usuarios() {
             </tr>
           </thead>
           <tbody>
-            {datos?.map((u) => (
+            {datos?.filter((u) => u.rol === 'ADMIN').map((u) => (
               <tr key={u.id}>
                 <td className="font-semibold">{u.nombre}</td>
                 <td className="text-sm text-ink-soft">{u.email}</td>
@@ -98,7 +98,7 @@ function Usuarios() {
           </tbody>
         </table>
       </div>
-      <p className="border-t border-line px-5 py-3 text-xs text-ink-mute">Contraseñas con bcrypt (costo 12). Los permisos de cada rol se revisan en el servidor en cada solicitud.</p>
+      <p className="border-t border-line px-5 py-3 text-xs text-ink-mute">Contraseñas con bcrypt (costo 12). El acceso de administrador se revisa en el servidor en cada solicitud.</p>
       <Modal abierto={nuevo} onCerrar={() => setNuevo(false)} titulo="Nuevo usuario">
         <form onSubmit={crear} className="space-y-3">
           <div>
@@ -109,21 +109,9 @@ function Usuarios() {
             <label className="label">Correo</label>
             <input type="email" className="input" value={d.email} onChange={(e) => setD({ ...d, email: e.target.value })} required />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="label">Rol</label>
-              <select className="input" value={d.rol} onChange={(e) => setD({ ...d, rol: e.target.value })}>
-                {Object.entries(ROLES).map(([k, v]) => (
-                  <option key={k} value={k}>
-                    {v.nombre}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="label">Institución</label>
-              <input className="input" value={d.institucion} onChange={(e) => setD({ ...d, institucion: e.target.value })} />
-            </div>
+          <div>
+            <label className="label">Institución</label>
+            <input className="input" value={d.institucion} onChange={(e) => setD({ ...d, institucion: e.target.value })} />
           </div>
           <div>
             <label className="label">Contraseña inicial</label>

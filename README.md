@@ -72,14 +72,11 @@ Levanta los tres servicios con `concurrently`: `afis`, la API y la app web. Abre
 
 ## Usuarios de demostración
 
-La contraseña es común a los cuatro y está en `server/.env` (`DEMO_PASSWORD`); `npm run setup` la imprime al terminar. En el login, «Entrar como · Usuarios de demostración» completa el correo.
+La contraseña está en `server/.env` (`DEMO_PASSWORD`); `npm run setup` la imprime al terminar. En el login, «Entrar como · Usuarios de demostración» completa el correo.
 
 | Usuario | Correo | Rol | Qué ve y puede hacer |
 | --- | --- | --- | --- |
-| Camila Rojas | admin@dactygen.cl | Administración | Todo: lotes, auditoría, administración, documento completo y alelos. |
-| Diego Fuentes | operador@dactygen.cl | Operador de toma | Escanear, asociar persona, consentimiento, toma, huellas, envío. Documento enmascarado. |
-| Dra. Valentina Soto | laboratorio@genlab.cl | Laboratorio | Bandeja, etapas, archivos, perfil genético, firma del vínculo. **No ve el número de documento.** |
-| Andrés Muñoz | verificador@dactygen.cl | Verificador | Escanear, verificación por huella/perfil/QR, custodia. **No ve los alelos completos.** |
+| Camila Rojas | admin@trazagen.cl | Administración | Toda la plataforma: lotes, personas, verificación, auditoría y administración. |
 
 Los permisos se revisan en el servidor en cada solicitud (JWT con expiración y rol leído de la base), no solo ocultando botones.
 

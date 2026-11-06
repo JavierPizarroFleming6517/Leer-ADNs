@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { post } from '../api';
 import { QrFalso } from '../componentes/QrFalso';
 import { Aviso, Cargando, mensaje } from '../ui';
-import type { ResultadoQr } from './Escanear';
+import type { ResultadoQr } from './Verificacion';
 
 // Destino de la URL del QR: /s/{codigo}.{firma}. Verifica la firma en el servidor antes de mostrar nada.
 export default function QrResolver() {

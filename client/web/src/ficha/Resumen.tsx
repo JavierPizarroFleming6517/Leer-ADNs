@@ -3,18 +3,25 @@ import { Link } from 'react-router-dom';
 import { Aviso, Hash, Icon, fecha } from '../ui';
 import type { TabProps } from './Ficha';
 
-function Tarjeta({ a, titulo, icono: I, ok, children }: { a: string; titulo: string; icono: (p: { className?: string }) => ReactNode; ok: boolean | null; children: ReactNode }) {
-  return (
-    <Link to={a} replace className="card group flex flex-col p-5 transition hover:-translate-y-0.5 hover:border-celeste-200 hover:shadow-lg">
+function Tarjeta({ a, titulo, icono: I, ok, children }: { a?: string; titulo: string; icono: (p: { className?: string }) => ReactNode; ok: boolean | null; children: ReactNode }) {
+  const cuerpo = (
+    <>
       <div className="flex items-center justify-between">
         <span className={`flex h-9 w-9 items-center justify-center rounded-xl ${ok ? 'bg-lima-100 text-lima-800' : ok === false ? 'bg-amber-100 text-amber-700' : 'bg-surface text-ink-mute'}`}>
           <I className="h-5 w-5" />
         </span>
-        <Icon.arrowRight className="h-4 w-4 text-ink-mute opacity-0 transition group-hover:opacity-100" />
+        {a ? <Icon.arrowRight className="h-4 w-4 text-ink-mute opacity-0 transition group-hover:opacity-100" /> : null}
       </div>
       <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-ink-mute">{titulo}</p>
       <div className="mt-1 text-sm text-ink">{children}</div>
+    </>
+  );
+  return a ? (
+    <Link to={a} replace className="card group flex flex-col p-5 transition hover:-translate-y-0.5 hover:border-celeste-200 hover:shadow-lg">
+      {cuerpo}
     </Link>
+  ) : (
+    <div className="card flex flex-col p-5">{cuerpo}</div>
   );
 }
 
@@ -33,9 +40,6 @@ export default function Resumen({ f }: TabProps) {
             </span>
           ))}
         </Aviso>
-      ) : null}
-      {f.muestra && f.muestra.estadoSello !== 'INTACTO' ? (
-        <Aviso tono="alerta" titulo={`Sello ${f.muestra.estadoSello === 'DANADO' ? 'dañado' : 'ausente'} al recibir en laboratorio`}>Quedó registrado en la cadena de custodia.</Aviso>
       ) : null}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Tarjeta a={`${base}/persona`} titulo="Persona" icono={Icon.user} ok={f.persona ? true : null}>
@@ -73,19 +77,6 @@ export default function Resumen({ f }: TabProps) {
             {f.toma?.dedosNoObtenibles.length ? ` · ${f.toma.dedosNoObtenibles.length} no obtenible` : ''}
           </p>
           {duplicados.length ? <p className="text-xs font-semibold text-red-700">Posible duplicado</p> : null}
-        </Tarjeta>
-        <Tarjeta a={`${base}/laboratorio`} titulo="Muestra biológica" icono={Icon.flask} ok={f.muestra ? true : null}>
-          {f.muestra ? (
-            <>
-              <p className="font-mono font-semibold">{f.muestra.codigo}</p>
-              <p className="text-xs text-ink-mute">
-                {f.muestra.etapaNombre} · {f.muestra.laboratorio}
-              </p>
-              {f.muestra.adnUgMl !== null ? <p className="text-xs text-ink-mute">ADN {f.muestra.adnUgMl} µg/ml</p> : null}
-            </>
-          ) : (
-            <p className="text-ink-mute">No recibida en laboratorio</p>
-          )}
         </Tarjeta>
         <Tarjeta a={`${base}/perfil`} titulo="Perfil genético" icono={Icon.dna} ok={f.perfil ? f.perfil.resumen.completoCodis : null}>
           {f.perfil ? (

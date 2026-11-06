@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Post, Query, Res } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Post, Query, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { Ctx, Roles, Sesion, TODOS } from '../common/sesion';
 import { CrearLoteDto, ResolverQrDto } from './dto/lote.dto';
@@ -22,6 +22,18 @@ export class StickersController {
   @Post('lotes')
   crearLote(@Sesion() ctx: Ctx, @Body() dto: CrearLoteDto) {
     return this.stickers.crearLote(dto, ctx);
+  }
+
+  @Roles('ADMIN')
+  @Delete('lotes/:id')
+  eliminarLote(@Sesion() ctx: Ctx, @Param('id', new ParseUUIDPipe()) id: string) {
+    return this.stickers.eliminarLote(id, ctx);
+  }
+
+  @Roles('ADMIN')
+  @Delete('stickers/:codigo')
+  eliminarSticker(@Sesion() ctx: Ctx, @Param('codigo') codigo: string) {
+    return this.stickers.eliminarSticker(codigo.slice(0, 20), ctx);
   }
 
   @Roles('ADMIN', 'OPERADOR_TOMA', 'LABORATORIO')

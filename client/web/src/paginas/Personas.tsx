@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { useCarga, useSesion } from '../sesion';
 import type { PersonaVista } from '../tipos';
-import { Aviso, Cargando, ChipEstado, Encabezado, Icon, Vacio, fecha } from '../ui';
+import { Aviso, Cargando, Encabezado, Icon, Vacio, fecha } from '../ui';
 
 type Fila = PersonaVista & { stickers: { codigo: string; estado: string; vinculado: boolean }[]; consentimientos: number };
 
@@ -69,7 +69,6 @@ export default function Personas() {
                         {p.stickers.map((s) => (
                           <Link key={s.codigo} to={`/stickers/${s.codigo}`} className="flex items-center gap-2 hover:text-celeste-700">
                             <span className="font-mono text-sm font-semibold">{s.codigo}</span>
-                            <ChipEstado estado={s.estado} />
                             {s.vinculado ? <Icon.shield className="h-4 w-4 text-lima-600" /> : null}
                           </Link>
                         ))}

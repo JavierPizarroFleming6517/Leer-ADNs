@@ -1,13 +1,12 @@
 import { useState } from 'react';
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api';
 import { useQr } from '../componentes/QrImagen';
 import { useCarga, useSesion } from '../sesion';
 import type { FichaSticker } from '../tipos';
-import { Aviso, Cargando, ChipEstado, Icon, Modal, fecha } from '../ui';
+import { Aviso, Cargando, Icon, Modal, fecha } from '../ui';
 import CustodiaTab from './CustodiaTab';
 import HuellasTab from './HuellasTab';
-import LabTab from './LabTab';
 import PerfilTab from './PerfilTab';
 import PersonaTab from './PersonaTab';
 import Resumen from './Resumen';
@@ -21,40 +20,10 @@ const PESTANAS = [
   { id: 'persona', t: 'Persona y consentimiento', i: Icon.user },
   { id: 'toma', t: 'Toma', i: Icon.clock },
   { id: 'huellas', t: 'Huellas', i: Icon.fingerprint },
-  { id: 'laboratorio', t: 'Laboratorio', i: Icon.flask },
   { id: 'perfil', t: 'Perfil genético', i: Icon.dna },
   { id: 'vinculo', t: 'Vínculo', i: Icon.shield },
   { id: 'custodia', t: 'Custodia', i: Icon.chain },
 ] as const;
-
-export const CICLO = [
-  { e: 'NUEVO', t: 'Nuevo', d: 'Fabricado, sin uso' },
-  { e: 'PROCESADO', t: 'Procesado', d: 'Toma y huellas registradas' },
-  { e: 'EN_USO', t: 'En uso', d: 'ADN extraído, queda material' },
-  { e: 'FINALIZADO', t: 'Finalizado', d: 'Sin material, se conserva el registro' },
-];
-
-function BarraCiclo({ estado }: { estado: string }) {
-  const actual = CICLO.findIndex((c) => c.e === estado);
-  return (
-    <ol className="grid grid-cols-4 gap-2" data-testid="ciclo">
-      {CICLO.map((c, i) => {
-        const hecho = i < actual;
-        const activo = i === actual;
-        return (
-          <li key={c.e} className="min-w-0">
-            <div className={`h-1.5 rounded-full transition-all ${hecho || activo ? (activo ? 'bg-celeste-600' : 'bg-lima-400') : 'bg-line'}`} />
-            <p className={`mt-2 flex items-center gap-1 text-xs font-semibold ${activo ? 'text-ink' : hecho ? 'text-ink-soft' : 'text-ink-mute'}`}>
-              {hecho ? <Icon.check className="h-3.5 w-3.5 text-lima-600" /> : null}
-              {c.t}
-            </p>
-            <p className="hidden truncate text-[11px] text-ink-mute sm:block">{c.d}</p>
-          </li>
-        );
-      })}
-    </ol>
-  );
-}
 
 export default function Ficha() {
   const { codigo = '', pestana = 'resumen' } = useParams();
@@ -65,10 +34,11 @@ export default function Ficha() {
   const [qrAbierto, setQrAbierto] = useState(false);
   const qr = useQr(f?.qrUrl, 640);
   const desdeQr = (loc.state as { desdeQr?: boolean; firmaVerificada?: boolean } | null) ?? null;
+  if (!PESTANAS.some((p) => p.id === pestana)) return <Navigate to={`/stickers/${codigo}`} replace />;
 
   if (error) return <Aviso tono="error" titulo="No se pudo abrir el sticker">{error}</Aviso>;
   if (!f) return <Cargando texto="Abriendo expediente…" />;
-  const actual = PESTANAS.some((p) => p.id === pestana) ? pestana : 'resumen';
+  const actual = pestana;
   const props = { f, recargar };
   const operador = usuario && ['ADMIN', 'OPERADOR_TOMA'].includes(usuario.rol);
 
@@ -89,7 +59,6 @@ export default function Ficha() {
             <p className="eyebrow">ID dactilogenético</p>
             <div className="mt-1 flex flex-wrap items-center gap-3">
               <h1 className="font-mono text-2xl font-bold tracking-wide sm:text-3xl" data-testid="codigo-sticker">{f.sticker.codigo}</h1>
-              <ChipEstado estado={f.sticker.estado} />
               {f.vinculo ? (
                 <span className="chip bg-ink text-white">
                   <Icon.shield className="h-3.5 w-3.5 text-lima-400" /> Vínculo firmado
@@ -112,9 +81,6 @@ export default function Ficha() {
               <Icon.arrowRight className="h-4 w-4" /> Iniciar toma
             </button>
           ) : null}
-        </div>
-        <div className="border-t border-line bg-surface/50 px-5 py-4 sm:px-6">
-          <BarraCiclo estado={f.sticker.estado} />
         </div>
         <nav className="flex gap-1 overflow-x-auto border-t border-line px-3 sm:px-4" role="tablist">
           {PESTANAS.map((p) => (
@@ -141,7 +107,6 @@ export default function Ficha() {
         {actual === 'persona' ? <PersonaTab {...props} /> : null}
         {actual === 'toma' ? <TomaTab {...props} /> : null}
         {actual === 'huellas' ? <HuellasTab {...props} /> : null}
-        {actual === 'laboratorio' ? <LabTab {...props} /> : null}
         {actual === 'perfil' ? <PerfilTab {...props} /> : null}
         {actual === 'vinculo' ? <VinculoTab {...props} /> : null}
         {actual === 'custodia' ? <CustodiaTab {...props} /> : null}

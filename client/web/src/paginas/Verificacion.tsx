@@ -1,14 +1,17 @@
 import { useCallback, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { post } from '../api';
-import { Escaner } from '../componentes/Escaner';
+import { Escaner, leerQrDeImagen } from '../componentes/Escaner';
 import { QrFalso } from '../componentes/QrFalso';
 import { Subir } from '../componentes/Subir';
 import { LeyendaMinucias, VisorHuella } from '../componentes/VisorHuella';
 import { useSesion } from '../sesion';
 import type { Minucia, Resumen } from '../tipos';
-import { Aviso, ChipEstado, Encabezado, Hash, Icon, Spinner, mensaje } from '../ui';
-import type { ResultadoQr } from './Escanear';
+import { Aviso, Encabezado, Hash, Icon, Spinner, mensaje } from '../ui';
+
+export type ResultadoQr =
+  | { valido: true; codigo: string; estado: string; vinculado: boolean; firmaVerificada: boolean }
+  | { valido: false; motivo: string; codigo: string | null };
 
 type Candidato = { huellaId: string; stickerCodigo: string; posicion: number; dedo: string; ancho: number; alto: number; puntaje: number; coincide: boolean; persona: { id: string; nombre: string } | null };
 type ResHuella = {
@@ -28,31 +31,38 @@ type ResPerfil = {
 
 export default function Verificacion() {
   const { puede } = useSesion();
+  const [params] = useSearchParams();
   const modos = [
     { id: 'huella', t: 'Por huella', i: Icon.fingerprint, ok: true },
     { id: 'perfil', t: 'Por perfil genético', i: Icon.dna, ok: puede('ADMIN', 'VERIFICADOR', 'LABORATORIO') },
     { id: 'qr', t: 'Por QR', i: Icon.qr, ok: true },
   ].filter((m) => m.ok);
-  const [modo, setModo] = useState('huella');
+  const [modo, setModo] = useState(params.get('modo') === 'qr' ? 'qr' : 'huella');
   return (
     <div>
       <Encabezado eyebrow="Base comparativa" titulo="Verificación de identidad">
-        Sube una huella o un perfil genético y TrazaGen lo compara contra todo el registro. Cada consulta queda en la cadena de custodia del sticker encontrado y en la auditoría.
+        Sube una huella, un perfil genético o un QR. TrazaGen lo compara contra el registro y cada consulta queda en la cadena de custodia y en la auditoría.
       </Encabezado>
-      <div className="mb-6 grid gap-2 sm:inline-grid sm:grid-flow-col">
-        {modos.map((m) => (
-          <button
-            key={m.id}
-            type="button"
-            onClick={() => setModo(m.id)}
-            data-testid={`modo-${m.id}`}
-            className={`flex items-center gap-2.5 rounded-xl border px-4 py-3 text-sm font-semibold transition ${modo === m.id ? 'border-ink bg-ink text-white shadow-lg' : 'border-line bg-white text-ink-soft hover:border-celeste-200'}`}
-          >
-            <m.i className={`h-5 w-5 ${modo === m.id ? 'text-lima-400' : 'text-celeste-600'}`} /> {m.t}
-          </button>
-        ))}
+      <div className="grid items-start gap-5 lg:grid-cols-[220px_minmax(0,1fr)]">
+        <nav className="card flex flex-row gap-1 p-2 lg:sticky lg:top-4 lg:flex-col" aria-label="Forma de verificación">
+          {modos.map((m) => {
+            const activo = modo === m.id;
+            return (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => setModo(m.id)}
+                data-testid={`modo-${m.id}`}
+                aria-pressed={activo}
+                className={`flex flex-1 items-center gap-2.5 rounded-xl px-3 py-3 text-left text-sm font-semibold transition lg:flex-none ${activo ? 'bg-celeste-50 text-ink ring-1 ring-celeste-200' : 'text-ink-soft hover:bg-surface'}`}
+              >
+                <m.i className={`h-5 w-5 shrink-0 ${activo ? 'text-celeste-600' : 'text-ink-mute'}`} /> {m.t}
+              </button>
+            );
+          })}
+        </nav>
+        <div className="min-w-0">{modo === 'huella' ? <PorHuella /> : modo === 'perfil' ? <PorPerfil /> : <PorQr />}</div>
       </div>
-      {modo === 'huella' ? <PorHuella /> : modo === 'perfil' ? <PorPerfil /> : <PorQr />}
     </div>
   );
 }
@@ -80,22 +90,26 @@ function PorHuella() {
   const mejor = r?.mejores.find((m) => m.coincide);
   const maxPuntaje = Math.max(r?.umbral ?? 40, ...(r?.mejores.map((m) => m.puntaje) ?? [0])) * 1.1;
   return (
-    <div className="grid gap-6 xl:grid-cols-[380px_1fr]">
-      <section className="card h-fit p-5">
-        <h2 className="mb-1 font-bold">Huella a verificar</h2>
-        <p className="mb-4 text-sm text-ink-soft">PNG, JPEG o TIFF. Se extrae la plantilla con SourceAFIS y se busca 1:N contra todas las huellas registradas.</p>
+    <div className="space-y-5">
+      <section className="card p-5">
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h2 className="font-bold">Huella a verificar</h2>
+            <p className="mt-1 max-w-xl text-sm text-ink-soft">PNG, JPEG o TIFF. Se extrae la plantilla con SourceAFIS y se busca 1:N contra todas las huellas registradas.</p>
+          </div>
+          <label className="flex items-center gap-3 text-sm font-semibold text-ink-soft">
+            Resolución
+            <select className="input w-auto" value={dpi} onChange={(e) => setDpi(Number(e.target.value))}>
+              {[500, 569, 600, 1000].map((v) => (
+                <option key={v} value={v}>
+                  {v} DPI
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
         <Subir acepta="image/png,image/jpeg,image/tiff,.tif,.tiff" titulo="Arrastra la imagen de la huella" formatos={['.png', '.jpg', '.tif']} cargando={cargando ? `Comparando ${cargando}…` : false} onArchivo={(a) => void subir(a)} testid="subir-huella-verificar" />
-        <label className="mt-4 flex items-center justify-between text-sm font-semibold text-ink-soft">
-          Resolución de la imagen
-          <select className="input w-auto" value={dpi} onChange={(e) => setDpi(Number(e.target.value))}>
-            {[500, 569, 600, 1000].map((v) => (
-              <option key={v} value={v}>
-                {v} DPI
-              </option>
-            ))}
-          </select>
-        </label>
-        <p className="mt-2 text-xs text-ink-mute">SourceAFIS no es invariante a escala: el DPI debe ser el de la digitalización.</p>
+        <p className="mt-3 text-xs text-ink-mute">SourceAFIS no es invariante a escala: el DPI debe ser el de la digitalización. El resultado aparece debajo.</p>
       </section>
 
       <div className="min-w-0 space-y-5">
@@ -194,11 +208,6 @@ function PorHuella() {
               </p>
             </section>
           </div>
-        ) : !cargando ? (
-          <div className="card flex flex-col items-center justify-center gap-2 py-20 text-center text-sm text-ink-mute">
-            <Icon.fingerprint className="h-10 w-10 text-celeste-200" />
-            El resultado de la búsqueda aparecerá aquí, con los puntajes reales del motor biométrico.
-          </div>
         ) : null}
       </div>
     </div>
@@ -224,9 +233,9 @@ function PorPerfil() {
     }
   }
   return (
-    <div className="grid gap-6 xl:grid-cols-[380px_1fr]">
-      <section className="card h-fit p-5">
-        <h2 className="mb-1 font-bold">Perfil a verificar</h2>
+    <div className="space-y-5">
+      <section className="card p-5">
+        <h2 className="font-bold">Perfil a verificar</h2>
         <p className="mb-4 text-sm text-ink-soft">CODIS CMF, planilla XLSX o CSV. Coincidencia exacta en todos los loci comunes (mínimo 10).</p>
         <Subir acepta=".xml,.xlsx,.csv" titulo="Arrastra el archivo del perfil" formatos={['CMF .xml', '.xlsx', '.csv']} cargando={cargando ? `Comparando ${cargando}…` : false} onArchivo={(a) => void subir(a)} testid="subir-perfil-verificar" />
       </section>
@@ -268,12 +277,7 @@ function PorPerfil() {
               {r.archivo.formato} · {r.archivo.nombre} · SHA-256 <Hash valor={r.archivo.sha256} corto />
             </p>
           </div>
-        ) : (
-          <div className="card flex flex-col items-center justify-center gap-2 py-20 text-center text-sm text-ink-mute">
-            <Icon.dna className="h-10 w-10 text-celeste-200" />
-            El resultado aparecerá aquí.
-          </div>
-        )}
+        ) : null}
       </div>
     </div>
   );
@@ -284,6 +288,8 @@ function PorQr() {
   const [codigo, setCodigo] = useState('');
   const [r, setR] = useState<ResultadoQr | null>(null);
   const [cargando, setCargando] = useState(false);
+  const [leyendoFoto, setLeyendoFoto] = useState(false);
+  const [error, setError] = useState('');
   const resolver = useCallback(async (texto: string) => {
     setCargando(true);
     try {
@@ -298,31 +304,61 @@ function PorQr() {
   const lectura = useCallback((t: string) => void resolver(t), [resolver]);
   if (r && !r.valido) return <QrFalso motivo={r.motivo} codigo={r.codigo} onReintentar={() => setR(null)} />;
   return (
-    <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
+    <div className="space-y-5">
+      {error ? <Aviso tono="error" titulo="No se pudo leer la foto">{error}</Aviso> : null}
       <section className="card p-5">
-        {camara ? (
-          <Escaner activo onLectura={lectura} />
-        ) : (
-          <button type="button" onClick={() => setCamara(true)} className="flex aspect-[4/3] w-full flex-col items-center justify-center rounded-2xl bg-ink text-celeste-100">
-            <Icon.qr className="h-14 w-14 text-celeste-400" />
-            <span className="mt-3 text-sm font-semibold">Activar cámara</span>
-          </button>
-        )}
-        <form
-          className="mt-4 flex gap-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void resolver(codigo);
-          }}
-        >
-          <input className="input font-mono uppercase" placeholder="TG-XXXX-XXXX o URL del QR" value={codigo} onChange={(e) => setCodigo(e.target.value)} />
-          <button className="btn-primary" disabled={cargando || codigo.length < 4}>
-            {cargando ? <Spinner /> : 'Verificar'}
-          </button>
-        </form>
+        <div className="grid gap-4 md:grid-cols-[220px_minmax(0,1fr)] md:items-center">
+          {camara ? (
+            <Escaner activo onLectura={lectura} />
+          ) : (
+            <button type="button" onClick={() => setCamara(true)} className="flex h-36 w-full flex-col items-center justify-center rounded-2xl bg-ink text-celeste-100">
+              <Icon.qr className="h-10 w-10 text-celeste-400" />
+              <span className="mt-2 text-sm font-semibold">Activar cámara</span>
+            </button>
+          )}
+          <form
+            className="flex flex-col gap-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void resolver(codigo);
+            }}
+          >
+            <div>
+              <h2 className="font-bold">Código del sticker</h2>
+              <p className="mt-1 text-sm text-ink-soft">Escanea el QR o escribe el código para comprobar que lo emitió TrazaGen.</p>
+            </div>
+            <div className="flex gap-2">
+              <input className="input font-mono uppercase" placeholder="TG-XXXX-XXXX o URL del QR" value={codigo} onChange={(e) => setCodigo(e.target.value)} data-testid="codigo-manual" />
+              <button className="btn-primary" disabled={cargando || codigo.length < 4}>
+                {cargando ? <Spinner /> : 'Verificar'}
+              </button>
+            </div>
+          </form>
+        </div>
+        <div className="mt-5 border-t border-line pt-5">
+          <h3 className="font-bold">Foto del QR</h3>
+          <p className="mb-4 mt-1 text-sm text-ink-soft">Una captura o una foto del código impreso.</p>
+          <Subir
+            compacto
+            acepta="image/*"
+            titulo="Sube o arrastra una foto del QR"
+            cargando={leyendoFoto ? 'Leyendo…' : false}
+            onArchivo={async (f) => {
+              setError('');
+              setLeyendoFoto(true);
+              try {
+                await resolver(await leerQrDeImagen(f));
+              } catch (e) {
+                setError(mensaje(e));
+              } finally {
+                setLeyendoFoto(false);
+              }
+            }}
+          />
+        </div>
       </section>
-      <section className="card flex flex-col justify-center p-6">
-        {r && r.valido ? (
+      {r && r.valido ? (
+        <section className="card flex flex-col justify-center p-6">
           <div className="aparecer text-center">
             <span className="pulso-ok mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-lima-400">
               <Icon.shield className="h-8 w-8 text-ink" />
@@ -330,20 +366,12 @@ function PorQr() {
             <p className="mt-4 text-xl font-bold">{r.firmaVerificada ? 'QR auténtico' : 'Código registrado'}</p>
             <p className="mt-1 text-sm text-ink-soft">{r.firmaVerificada ? 'La firma Ed25519 corresponde a TrazaGen.' : 'Código ingresado a mano: existe en el registro.'}</p>
             <p className="mt-4 font-mono text-2xl font-bold">{r.codigo}</p>
-            <div className="mt-2 flex justify-center">
-              <ChipEstado estado={r.estado} />
-            </div>
-            <Link to={`/stickers/${r.codigo}`} className="btn-primary mt-6">
+            <Link to={`/stickers/${r.codigo}`} state={{ desdeQr: true, firmaVerificada: r.firmaVerificada }} className="btn-primary mt-6">
               Ver expediente <Icon.arrowRight className="h-4 w-4" />
             </Link>
           </div>
-        ) : (
-          <div className="text-center text-sm text-ink-mute">
-            <Icon.qr className="mx-auto h-10 w-10 text-celeste-200" />
-            <p className="mt-2">Escanea o ingresa un código para verificar que fue emitido por TrazaGen.</p>
-          </div>
-        )}
-      </section>
+        </section>
+      ) : null}
     </div>
   );
 }

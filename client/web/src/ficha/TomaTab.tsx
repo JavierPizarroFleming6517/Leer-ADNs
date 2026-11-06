@@ -71,7 +71,7 @@ export default function TomaTab({ f, recargar }: TabProps) {
 }
 
 function FormToma({ f, recargar, operador }: TabProps & { operador: string }) {
-  const [d, setD] = useState({ fechaHora: ahoraLocal(), lugar: 'Centro de Toma Dactygen · Providencia, Santiago', observaciones: '' });
+  const [d, setD] = useState({ fechaHora: ahoraLocal(), lugar: 'Centro de Toma TrazaGen · Providencia, Santiago', observaciones: '' });
   const [noObt, setNoObt] = useState<Record<number, string>>({});
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(false);
