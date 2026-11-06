@@ -17,6 +17,7 @@ correr(npm, ['install', '--no-audit', '--no-fund'], WEB);
 paso('Configurando server/.env (secretos y llaves Ed25519)');
 const env = asegurarEnv();
 console.log(env.nuevo ? '  server/.env creado.' : '  server/.env ya existía.', env.generados.length ? `Generado: ${env.generados.join(', ')}` : 'Sin cambios.');
+console.log(`  Base de datos: ${env.baseDatos}  (DATABASE_URL en server/.env)`);
 
 compilarAfis(true);
 

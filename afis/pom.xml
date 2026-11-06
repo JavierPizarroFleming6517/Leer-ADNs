@@ -11,7 +11,10 @@
   <description>Microservicio HTTP de huellas dactilares con SourceAFIS</description>
 
   <properties>
-    <maven.compiler.release>17</maven.compiler.release>
+    <!-- source/target en vez de release: algunos JDK de distribuciones (p. ej. Fedora) no traen ct.sym
+         y fallan con "release version 17 not supported". Funciona con cualquier JDK 17 o superior. -->
+    <maven.compiler.source>17</maven.compiler.source>
+    <maven.compiler.target>17</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <sourceafis.version>3.18.1</sourceafis.version>
     <jackson.version>2.17.2</jackson.version>

@@ -19,6 +19,9 @@ export function asegurarEnv() {
   };
   const generados = [];
   if (process.env.DATABASE_URL && nuevo) poner('DATABASE_URL', process.env.DATABASE_URL);
+  if (!valor('DATABASE_URL')) (poner('DATABASE_URL', 'postgresql://trazagen:trazagen@localhost:5432/trazagen?schema=public'), generados.push('DATABASE_URL'));
+  // Un .env de una versión anterior puede traer un JWT_SECRET corto: se reemplaza.
+  if (valor('JWT_SECRET').length < 32) (poner('JWT_SECRET', randomBytes(48).toString('base64url')), generados.push('JWT_SECRET'));
   if (!valor('JWT_SECRET')) (poner('JWT_SECRET', randomBytes(48).toString('base64url')), generados.push('JWT_SECRET'));
   if (!valor('DEMO_PASSWORD')) (poner('DEMO_PASSWORD', `Demo-${randomBytes(4).toString('hex')}`), generados.push('DEMO_PASSWORD'));
   if (!valor('DATA_ENCRYPTION_KEY')) (poner('DATA_ENCRYPTION_KEY', randomBytes(32).toString('base64')), generados.push('DATA_ENCRYPTION_KEY'));
@@ -30,7 +33,14 @@ export function asegurarEnv() {
     generados.push('ED25519_PRIVATE_KEY', 'ED25519_PUBLIC_KEY');
   }
   writeFileSync(destino, texto, { mode: 0o600 });
-  return { nuevo, generados, demoPassword: valor('DEMO_PASSWORD') };
+  let baseDatos = '(no válida)';
+  try {
+    const u = new URL(valor('DATABASE_URL'));
+    baseDatos = `${u.hostname}:${u.port || 5432}${u.pathname}`;
+  } catch {
+    /* se informa como no válida */
+  }
+  return { nuevo, generados, demoPassword: valor('DEMO_PASSWORD'), baseDatos };
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
