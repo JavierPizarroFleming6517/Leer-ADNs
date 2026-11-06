@@ -27,7 +27,12 @@ export function muestraDelArchivo(leido: ArchivoLeido, codigoMuestra: string) {
 // Los loci del archivo deben ser del kit declarado. Devuelve los loci del kit sin dato.
 export function lociFueraDeKit(m: Marcadores, loci: string[]) {
   const enKit = new Set(loci);
-  return { fuera: Object.keys(m).filter((l) => !enKit.has(l)), faltantes: loci.filter((l) => !m[l]?.length) };
+  // Sin cromosoma Y (amelogenina solo X) no se esperan marcadores Y-STR como DYS391.
+  const sinY = Boolean(m.AMEL?.length) && !m.AMEL.includes('Y');
+  return {
+    fuera: Object.keys(m).filter((l) => !enKit.has(l)),
+    faltantes: loci.filter((l) => !m[l]?.length && !(sinY && /^DYS/i.test(l))),
+  };
 }
 
 export function sha256Perfil(m: Marcadores): string {

@@ -80,7 +80,7 @@ export default function LabTab({ f, recargar }: TabProps) {
               <FormRecepcion codigo={f.sticker.codigo} recargar={recargar} />
             )
           ) : siguiente && siguiente !== 'PERFIL_CARGADO' ? (
-            <FormEtapa etapa={siguiente} codigo={f.sticker.codigo} recargar={recargar} />
+            <FormEtapa key={siguiente} etapa={siguiente} codigo={f.sticker.codigo} recargar={recargar} />
           ) : siguiente === 'PERFIL_CARGADO' ? (
             <Aviso tono="info" titulo="Etapas completas">Carga el perfil genético en la pestaña «Perfil genético».</Aviso>
           ) : null
@@ -142,10 +142,30 @@ function DetalleEtapa({ detalle }: { detalle: Record<string, unknown> }) {
     <p className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5">
       {items.map(([k, v]) => (
         <span key={k}>
-          <span className="text-ink-mute">{etiquetas[k]}:</span> <span className="font-medium text-ink">{String(v === true ? 'sí' : v)}</span>
+          <span className="text-ink-mute">{etiquetas[k]}:</span> <span className="font-medium text-ink">{k === 'estadoSello' ? SELLOS.find((x) => x.v === v)?.t ?? String(v) : String(v === true ? 'sí' : v)}</span>
         </span>
       ))}
     </p>
+  );
+}
+
+function ElegirArchivo({ onArchivo, texto, deshabilitado = false }: { onArchivo: (f: File | null) => void; texto: string; deshabilitado?: boolean }) {
+  return (
+    <label className={`flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-line px-3 py-2.5 text-sm transition hover:border-celeste-200 hover:bg-celeste-50/50 ${deshabilitado ? 'pointer-events-none opacity-60' : ''}`}>
+      <span className="btn-secondary btn-sm pointer-events-none">
+        <Icon.upload className="h-4 w-4" /> Elegir archivo
+      </span>
+      <span className="min-w-0 truncate text-ink-soft">{texto}</span>
+      <input
+        type="file"
+        className="hidden"
+        disabled={deshabilitado}
+        onChange={(e) => {
+          onArchivo(e.target.files?.[0] ?? null);
+          e.target.value = '';
+        }}
+      />
+    </label>
   );
 }
 
@@ -153,8 +173,8 @@ function ArchivoOpcional({ archivo, setArchivo }: { archivo: File | null; setArc
   return (
     <div>
       <label className="label">Archivo de la etapa (opcional)</label>
-      <input type="file" className="block w-full text-sm text-ink-soft file:mr-3 file:rounded-lg file:border-0 file:bg-celeste-50 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-celeste-700" onChange={(e) => setArchivo(e.target.files?.[0] ?? null)} />
-      {archivo ? <p className="mt-1 text-xs text-ink-mute">{archivo.name} · se guardará sin modificar con su SHA-256</p> : null}
+      <ElegirArchivo onArchivo={setArchivo} texto={archivo ? archivo.name : 'Ningún archivo seleccionado'} />
+      {archivo ? <p className="mt-1 text-xs text-ink-mute">Se guardará sin modificar, con su SHA-256 en la cadena de custodia.</p> : null}
     </div>
   );
 }
@@ -297,12 +317,10 @@ function Adjuntar({ codigo, recargar }: { codigo: string; recargar: () => void }
   return (
     <Seccion titulo="Adjuntar archivo" icono={Icon.upload}>
       <p className="mb-3 text-xs text-ink-soft">.fsa, .hid, PDF de GeneMapper, CSV de qPCR, archivos de variantes… Se guardan sin modificar, marcados como «almacenado, no interpretado».</p>
-      <input
-        type="file"
-        className="block w-full text-sm text-ink-soft file:mr-3 file:rounded-lg file:border-0 file:bg-celeste-50 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-celeste-700"
-        disabled={cargando}
-        onChange={async (e) => {
-          const a = e.target.files?.[0];
+      <ElegirArchivo
+        deshabilitado={cargando}
+        texto={cargando ? 'Subiendo…' : 'Ningún archivo seleccionado'}
+        onArchivo={async (a) => {
           if (!a) return;
           setCargando(true);
           setMsg(null);
@@ -316,7 +334,6 @@ function Adjuntar({ codigo, recargar }: { codigo: string; recargar: () => void }
             setMsg({ ok: false, t: mensaje(err) });
           } finally {
             setCargando(false);
-            e.target.value = '';
           }
         }}
       />

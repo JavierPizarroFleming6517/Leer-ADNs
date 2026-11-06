@@ -72,3 +72,13 @@ describe('Validación de custodia: muestra del archivo vs. muestra del sticker',
     expect(lociFueraDeKit(marcadores, pp).faltantes).toEqual(expect.arrayContaining(['Penta D', 'Penta E']));
   });
 });
+
+describe('Loci Y-STR', () => {
+  test('en un perfil XX no se reporta DYS391 como faltante', () => {
+    const gf = KITS.find((k) => k.nombre === 'GlobalFiler')!.loci;
+    expect(lociFueraDeKit(perfilGlobalFiler(5, 'F'), gf).faltantes).toEqual([]);
+    const sinDys = { ...perfilGlobalFiler(6, 'M') };
+    delete sinDys.DYS391;
+    expect(lociFueraDeKit(sinDys, gf).faltantes).toEqual(['DYS391']);
+  });
+});

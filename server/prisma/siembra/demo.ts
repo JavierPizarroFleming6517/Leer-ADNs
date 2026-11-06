@@ -188,7 +188,7 @@ async function sembrar(app: INestApplicationContext, base: { usuarios: Usuarios;
       if (p.noObtenible?.posicion === pos) continue;
       dedos.push({ posicion: pos, dedo: PARA_PERSONAS[k++], impresion: 1 });
     }
-    const persona = await tomar(codigo, p, t0, dedos, p.noObtenible ? [p.noObtenible] : []);
+    await tomar(codigo, p, t0, dedos, p.noObtenible ? [p.noObtenible] : []);
     const { muestra, t } = await laboratorio(codigo, 'INTERPRETACION', t0 + DIA);
     const marcadores = perfilGlobalFiler(i + 1, p.sexo);
     perfiles[codigo] = marcadores;
@@ -197,9 +197,9 @@ async function sembrar(app: INestApplicationContext, base: { usuarios: Usuarios;
     await vinculos.firmar(codigo, ctx('laboratorio', t + hora(5)));
     if (i < 2) await lab.finalizar(codigo, 'Se agotó el material del adhesivo en la re-extracción.', ctx('laboratorio', t + 4 * DIA));
     for (const d of dedos) {
-      asignacion.push({ persona: `${p.nombres} ${p.apellidos}`, personaId: persona.id, sticker: codigo, posicion: d.posicion, dedo: DEDOS[d.posicion], archivo: rel(d.dedo, 1), dpi: DPI[d.dedo.db] });
+      asignacion.push({ persona: `${p.nombres} ${p.apellidos}`, sticker: codigo, posicion: d.posicion, dedo: DEDOS[d.posicion], archivo: rel(d.dedo, 1), dpi: DPI[d.dedo.db] });
     }
-    if (p.noObtenible) asignacion.push({ persona: `${p.nombres} ${p.apellidos}`, personaId: persona.id, sticker: codigo, posicion: p.noObtenible.posicion, dedo: DEDOS[p.noObtenible.posicion], archivo: null, noObtenible: p.noObtenible.motivo });
+    if (p.noObtenible) asignacion.push({ persona: `${p.nombres} ${p.apellidos}`, sticker: codigo, posicion: p.noObtenible.posicion, dedo: DEDOS[p.noObtenible.posicion], archivo: null, noObtenible: p.noObtenible.motivo });
     process.stdout.write(`  · ${codigo} ${p.nombres} ${p.apellidos}: ${dedos.length} huellas, muestra ${muestra}, vínculo firmado\n`);
   }
   console.log('✓ 8 personas completas con huellas, perfil GlobalFiler, custodia y vínculo firmado.');
@@ -256,11 +256,12 @@ async function sembrar(app: INestApplicationContext, base: { usuarios: Usuarios;
   writeFileSync(join(DEMO, 'toma', 'dedo_nuevo_indice_derecho.png'), await png(RESERVA_TOMA, 1));
   writeFileSync(join(DEMO, 'toma', 'dedo_repetido.png'), await png(DUPLICADO_TOMA, 3));
 
+  const fechaArchivos = new Date('2026-11-02T09:00:00Z'); // fija: los archivos de ejemplo no cambian entre siembras
   const perfilLab = perfilGlobalFiler(101, LAB_A.sexo);
-  writeFileSync(join(DEMO, 'perfil_sticker_en_lab.xml'), construirCmf([{ id: labA.muestra, marcadores: perfilLab }]));
-  writeFileSync(join(DEMO, 'perfil_otra_muestra.xml'), construirCmf([{ id: 'M-000431', marcadores: perfilGlobalFiler(202, 'M') }]));
+  writeFileSync(join(DEMO, 'perfil_sticker_en_lab.xml'), construirCmf([{ id: labA.muestra, marcadores: perfilLab }], fechaArchivos));
+  writeFileSync(join(DEMO, 'perfil_otra_muestra.xml'), construirCmf([{ id: 'M-000431', marcadores: perfilGlobalFiler(202, 'M') }], fechaArchivos));
   const registrada = PERSONAS[4];
-  writeFileSync(join(DEMO, 'perfil_persona_registrada.xml'), construirCmf([{ id: 'CONSULTA-2026-0912', marcadores: perfiles[codigos[4]], categoria: 'Query' }]));
+  writeFileSync(join(DEMO, 'perfil_persona_registrada.xml'), construirCmf([{ id: 'CONSULTA-2026-0912', marcadores: perfiles[codigos[4]], categoria: 'Query' }], fechaArchivos));
   writeFileSync(
     join(DEMO, 'consentimiento_firmado.pdf'),
     pdfSimple('Consentimiento informado · TrazaGen', [

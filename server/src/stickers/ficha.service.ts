@@ -5,7 +5,7 @@ import { Ctx } from '../common/sesion';
 import { normalizarCodigo } from '../cripto/cripto';
 import { CriptoService } from '../cripto/cripto.service';
 import { CustodiaService, NOMBRE_EVENTO } from '../custodia/custodia.service';
-import { Marcadores, resumir } from '../genetica/str';
+import { Marcadores, ordenarMarcadores, resumir } from '../genetica/str';
 import { NOMBRE_FORMATO, Formato } from '../genetica/lectores';
 import { PersonasService } from '../personas/personas.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -53,7 +53,7 @@ export class FichaService {
     const eventos = await this.custodia.eventosDeSticker(s.id);
     const vigente = s.vinculos.find((v) => v.estado === 'VIGENTE');
     const verAlelos = puedeVerAlelos(rol);
-    const marcadores = s.perfil ? (s.perfil.marcadores as Marcadores) : null;
+    const marcadores = s.perfil ? ordenarMarcadores(s.perfil.marcadores as Marcadores) : null;
 
     return {
       sticker: {
