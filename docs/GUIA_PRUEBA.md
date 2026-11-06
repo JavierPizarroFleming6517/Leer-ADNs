@@ -67,11 +67,20 @@ grep DEMO_PASSWORD server/.env
 
 ## 4. Resultado del laboratorio
 
-Este sticker nuevo no tiene un archivo de resultado de ejemplo (el `SPECIMENID` debe ser su código). Para el guion se usa el sticker sembrado que ya está esperando su perfil:
+El laboratorio devuelve un archivo cuyo `SPECIMENID` debe ser **el código del sticker**. Como los códigos son aleatorios, el archivo de prueba se genera para tu sticker con un comando.
 
-1. **Inicio** → «En el laboratorio externo» → abre el sticker que lleva **más días** esperando (el que no tiene huella duplicada).
+1. Sigue en el sticker del paso 3 (pestaña **Laboratorio y perfil**).
 2. Sube `examples/demo/perfil_otra_muestra.xml` → 🔴 **Archivo rechazado**: «El archivo corresponde a otra muestra. Contiene TG-9Q4M-2XKD; se esperaba TG-…, el código de este sticker».
-3. Sube `examples/demo/perfil_sticker_en_lab.xml` → ✅ **Perfil aceptado · 20/20 CODIS**, «Sin coincidencias en el registro». El sticker pasa a **En uso** (llegó el perfil y queda material).
+3. En una terminal, genera el resultado para **tu** sticker (usa su código, el que aparece en la ficha):
+
+```bash
+npm run demo:resultado -- TG-XXXX-XXXX
+```
+
+   Crea `examples/demo/resultados/TG-XXXX-XXXX.xml`: un CODIS CMF con `SPECIMENID` = el código del sticker y un perfil GlobalFiler ficticio. Es una herramienta de demostración; en la realidad ese archivo lo entrega el laboratorio.
+4. Sube ese archivo con el kit **GlobalFiler** → ✅ **Perfil aceptado · 20/20 CODIS**, «Sin coincidencias en el registro». El sticker pasa a **En uso** (llegó el perfil y queda material).
+
+**Atajo sin terminal:** en **Inicio** → «En el laboratorio externo», abre el sticker sembrado que lleva **más días** esperando (el que no tiene huella duplicada) y sube `examples/demo/perfil_sticker_en_lab.xml`, que ya trae su código.
 4. (Opcional) **Adjuntar archivo**: sube cualquier PDF como informe del laboratorio; queda «almacenado, no interpretado», con su SHA-256.
 5. (Opcional) **«El laboratorio informa material agotado»** → el sticker pasa a **Finalizado**.
 

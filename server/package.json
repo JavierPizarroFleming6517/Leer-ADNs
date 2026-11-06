@@ -10,7 +10,8 @@
     "prisma:migrate": "prisma migrate deploy",
     "seed": "ts-node --transpile-only prisma/seed.ts",
     "demo:alterar": "ts-node --transpile-only scripts/alterar.ts",
-    "test": "jest --runInBand"
+    "test": "jest --runInBand",
+    "demo:resultado": "ts-node --transpile-only scripts/resultado.ts"
   },
   "prisma": {
     "seed": "ts-node --transpile-only prisma/seed.ts"

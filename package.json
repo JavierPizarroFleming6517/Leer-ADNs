@@ -9,7 +9,8 @@
     "demo:alterar": "npm run demo:alterar --prefix server",
     "test": "npm test --prefix server",
     "test:afis": "node scripts/evaluar-afis.mjs",
-    "test:e2e": "node e2e/guion.mjs"
+    "test:e2e": "node e2e/guion.mjs",
+    "demo:resultado": "npm run -s demo:resultado --prefix server --"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",

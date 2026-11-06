@@ -8,3 +8,4 @@ afis/target/
 server/uploads/
 e2e/salida/
 *.tsbuildinfo
+examples/demo/resultados/

@@ -9,7 +9,7 @@
   "personas": [
     {
       "persona": "Valeria Andrea Contreras Ibáñez",
-      "sticker": "TG-E7Q8-4CYY",
+      "sticker": "TG-VW5N-WBSY",
       "posicion": 1,
       "dedo": "Pulgar derecho",
       "archivo": "datasets/fvc2002/DB1_B/101_1.tif",
@@ -17,7 +17,7 @@
     },
     {
       "persona": "Valeria Andrea Contreras Ibáñez",
-      "sticker": "TG-E7Q8-4CYY",
+      "sticker": "TG-VW5N-WBSY",
       "posicion": 2,
       "dedo": "Índice derecho",
       "archivo": "datasets/fvc2002/DB1_B/102_1.tif",
@@ -25,7 +25,7 @@
     },
     {
       "persona": "Valeria Andrea Contreras Ibáñez",
-      "sticker": "TG-E7Q8-4CYY",
+      "sticker": "TG-VW5N-WBSY",
       "posicion": 3,
       "dedo": "Medio derecho",
       "archivo": "datasets/fvc2002/DB1_B/103_1.tif",
@@ -33,7 +33,7 @@
     },
     {
       "persona": "Valeria Andrea Contreras Ibáñez",
-      "sticker": "TG-E7Q8-4CYY",
+      "sticker": "TG-VW5N-WBSY",
       "posicion": 4,
       "dedo": "Anular derecho",
       "archivo": "datasets/fvc2002/DB1_B/104_1.tif",
@@ -41,7 +41,7 @@
     },
     {
       "persona": "Valeria Andrea Contreras Ibáñez",
-      "sticker": "TG-E7Q8-4CYY",
+      "sticker": "TG-VW5N-WBSY",
       "posicion": 5,
       "dedo": "Meñique derecho",
       "archivo": "datasets/fvc2002/DB1_B/106_1.tif",
@@ -49,7 +49,7 @@
     },
     {
       "persona": "Matías Ignacio Herrera Lagos",
-      "sticker": "TG-JTHR-NEF7",
+      "sticker": "TG-6QTV-YHZR",
       "posicion": 1,
       "dedo": "Pulgar derecho",
       "archivo": "datasets/fvc2002/DB1_B/108_1.tif",
@@ -57,7 +57,7 @@
     },
     {
       "persona": "Matías Ignacio Herrera Lagos",
-      "sticker": "TG-JTHR-NEF7",
+      "sticker": "TG-6QTV-YHZR",
       "posicion": 2,
       "dedo": "Índice derecho",
       "archivo": "datasets/fvc2002/DB1_B/110_1.tif",
@@ -65,7 +65,7 @@
     },
     {
       "persona": "Matías Ignacio Herrera Lagos",
-      "sticker": "TG-JTHR-NEF7",
+      "sticker": "TG-6QTV-YHZR",
       "posicion": 3,
       "dedo": "Medio derecho",
       "archivo": "datasets/fvc2002/DB2_B/101_1.tif",
@@ -73,7 +73,7 @@
     },
     {
       "persona": "Matías Ignacio Herrera Lagos",
-      "sticker": "TG-JTHR-NEF7",
+      "sticker": "TG-6QTV-YHZR",
       "posicion": 4,
       "dedo": "Anular derecho",
       "archivo": "datasets/fvc2002/DB2_B/102_1.tif",
@@ -81,7 +81,7 @@
     },
     {
       "persona": "Matías Ignacio Herrera Lagos",
-      "sticker": "TG-JTHR-NEF7",
+      "sticker": "TG-6QTV-YHZR",
       "posicion": 5,
       "dedo": "Meñique derecho",
       "archivo": "datasets/fvc2002/DB2_B/103_1.tif",
@@ -89,7 +89,7 @@
     },
     {
       "persona": "Lucía Belén Fernández Ortiz",
-      "sticker": "TG-CFC1-25AC",
+      "sticker": "TG-VWW2-PV9C",
       "posicion": 1,
       "dedo": "Pulgar derecho",
       "archivo": "datasets/fvc2002/DB2_B/104_1.tif",
@@ -97,7 +97,7 @@
     },
     {
       "persona": "Lucía Belén Fernández Ortiz",
-      "sticker": "TG-CFC1-25AC",
+      "sticker": "TG-VWW2-PV9C",
       "posicion": 2,
       "dedo": "Índice derecho",
       "archivo": "datasets/fvc2002/DB2_B/105_1.tif",
@@ -105,7 +105,7 @@
     },
     {
       "persona": "Lucía Belén Fernández Ortiz",
-      "sticker": "TG-CFC1-25AC",
+      "sticker": "TG-VWW2-PV9C",
       "posicion": 3,
       "dedo": "Medio derecho",
       "archivo": "datasets/fvc2002/DB2_B/106_1.tif",
@@ -113,7 +113,7 @@
     },
     {
       "persona": "Lucía Belén Fernández Ortiz",
-      "sticker": "TG-CFC1-25AC",
+      "sticker": "TG-VWW2-PV9C",
       "posicion": 4,
       "dedo": "Anular derecho",
       "archivo": "datasets/fvc2002/DB2_B/107_1.tif",
@@ -121,7 +121,7 @@
     },
     {
       "persona": "Lucía Belén Fernández Ortiz",
-      "sticker": "TG-CFC1-25AC",
+      "sticker": "TG-VWW2-PV9C",
       "posicion": 5,
       "dedo": "Meñique derecho",
       "archivo": "datasets/fvc2002/DB2_B/108_1.tif",
@@ -129,7 +129,7 @@
     },
     {
       "persona": "Sebastián Rojas Alarcón",
-      "sticker": "TG-Q3S1-6X2K",
+      "sticker": "TG-D531-HEYB",
       "posicion": 1,
       "dedo": "Pulgar derecho",
       "archivo": "datasets/fvc2002/DB2_B/109_1.tif",
@@ -137,7 +137,7 @@
     },
     {
       "persona": "Sebastián Rojas Alarcón",
-      "sticker": "TG-Q3S1-6X2K",
+      "sticker": "TG-D531-HEYB",
       "posicion": 2,
       "dedo": "Índice derecho",
       "archivo": "datasets/fvc2002/DB2_B/110_1.tif",
@@ -145,7 +145,7 @@
     },
     {
       "persona": "Sebastián Rojas Alarcón",
-      "sticker": "TG-Q3S1-6X2K",
+      "sticker": "TG-D531-HEYB",
       "posicion": 3,
       "dedo": "Medio derecho",
       "archivo": "datasets/fvc2002/DB3_B/101_1.tif",
@@ -153,7 +153,7 @@
     },
     {
       "persona": "Sebastián Rojas Alarcón",
-      "sticker": "TG-Q3S1-6X2K",
+      "sticker": "TG-D531-HEYB",
       "posicion": 4,
       "dedo": "Anular derecho",
       "archivo": "datasets/fvc2002/DB3_B/102_1.tif",
@@ -161,7 +161,7 @@
     },
     {
       "persona": "Sebastián Rojas Alarcón",
-      "sticker": "TG-Q3S1-6X2K",
+      "sticker": "TG-D531-HEYB",
       "posicion": 5,
       "dedo": "Meñique derecho",
       "archivo": "datasets/fvc2002/DB3_B/103_1.tif",
@@ -169,7 +169,7 @@
     },
     {
       "persona": "Camila Andrea Vargas Peña",
-      "sticker": "TG-F07A-9A9N",
+      "sticker": "TG-ASHE-Y8BY",
       "posicion": 1,
       "dedo": "Pulgar derecho",
       "archivo": "datasets/fvc2002/DB3_B/104_1.tif",
@@ -177,7 +177,7 @@
     },
     {
       "persona": "Camila Andrea Vargas Peña",
-      "sticker": "TG-F07A-9A9N",
+      "sticker": "TG-ASHE-Y8BY",
       "posicion": 2,
       "dedo": "Índice derecho",
       "archivo": "datasets/fvc2002/DB3_B/105_1.tif",
@@ -185,7 +185,7 @@
     },
     {
       "persona": "Camila Andrea Vargas Peña",
-      "sticker": "TG-F07A-9A9N",
+      "sticker": "TG-ASHE-Y8BY",
       "posicion": 3,
       "dedo": "Medio derecho",
       "archivo": "datasets/fvc2002/DB3_B/106_1.tif",
@@ -193,7 +193,7 @@
     },
     {
       "persona": "Camila Andrea Vargas Peña",
-      "sticker": "TG-F07A-9A9N",
+      "sticker": "TG-ASHE-Y8BY",
       "posicion": 5,
       "dedo": "Meñique derecho",
       "archivo": "datasets/fvc2002/DB3_B/107_1.tif",
@@ -201,7 +201,7 @@
     },
     {
       "persona": "Camila Andrea Vargas Peña",
-      "sticker": "TG-F07A-9A9N",
+      "sticker": "TG-ASHE-Y8BY",
       "posicion": 4,
       "dedo": "Anular derecho",
       "archivo": null,
@@ -209,7 +209,7 @@
     },
     {
       "persona": "Joaquín Andrés Medina Salas",
-      "sticker": "TG-ZNC0-RH6S",
+      "sticker": "TG-Q480-N6CE",
       "posicion": 1,
       "dedo": "Pulgar derecho",
       "archivo": "datasets/fvc2002/DB3_B/108_1.tif",
@@ -217,7 +217,7 @@
     },
     {
       "persona": "Joaquín Andrés Medina Salas",
-      "sticker": "TG-ZNC0-RH6S",
+      "sticker": "TG-Q480-N6CE",
       "posicion": 3,
       "dedo": "Medio derecho",
       "archivo": "datasets/fvc2002/DB3_B/109_1.tif",
@@ -225,7 +225,7 @@
     },
     {
       "persona": "Joaquín Andrés Medina Salas",
-      "sticker": "TG-ZNC0-RH6S",
+      "sticker": "TG-Q480-N6CE",
       "posicion": 4,
       "dedo": "Anular derecho",
       "archivo": "datasets/fvc2002/DB3_B/110_1.tif",
@@ -233,7 +233,7 @@
     },
     {
       "persona": "Joaquín Andrés Medina Salas",
-      "sticker": "TG-ZNC0-RH6S",
+      "sticker": "TG-Q480-N6CE",
       "posicion": 5,
       "dedo": "Meñique derecho",
       "archivo": "datasets/fvc2002/DB4_B/101_1.tif",
@@ -241,7 +241,7 @@
     },
     {
       "persona": "Joaquín Andrés Medina Salas",
-      "sticker": "TG-ZNC0-RH6S",
+      "sticker": "TG-Q480-N6CE",
       "posicion": 2,
       "dedo": "Índice derecho",
       "archivo": null,
@@ -249,7 +249,7 @@
     },
     {
       "persona": "Fernanda Castillo Ruiz",
-      "sticker": "TG-XCSG-MHJW",
+      "sticker": "TG-VM0R-QQDT",
       "posicion": 1,
       "dedo": "Pulgar derecho",
       "archivo": "datasets/fvc2002/DB4_B/102_1.tif",
@@ -257,7 +257,7 @@
     },
     {
       "persona": "Fernanda Castillo Ruiz",
-      "sticker": "TG-XCSG-MHJW",
+      "sticker": "TG-VM0R-QQDT",
       "posicion": 2,
       "dedo": "Índice derecho",
       "archivo": "datasets/fvc2002/DB4_B/104_1.tif",
@@ -265,7 +265,7 @@
     },
     {
       "persona": "Fernanda Castillo Ruiz",
-      "sticker": "TG-XCSG-MHJW",
+      "sticker": "TG-VM0R-QQDT",
       "posicion": 4,
       "dedo": "Anular derecho",
       "archivo": "datasets/fvc2002/DB4_B/105_1.tif",
@@ -273,7 +273,7 @@
     },
     {
       "persona": "Fernanda Castillo Ruiz",
-      "sticker": "TG-XCSG-MHJW",
+      "sticker": "TG-VM0R-QQDT",
       "posicion": 5,
       "dedo": "Meñique derecho",
       "archivo": "datasets/fvc2002/DB4_B/106_1.tif",
@@ -281,7 +281,7 @@
     },
     {
       "persona": "Fernanda Castillo Ruiz",
-      "sticker": "TG-XCSG-MHJW",
+      "sticker": "TG-VM0R-QQDT",
       "posicion": 3,
       "dedo": "Medio derecho",
       "archivo": null,
@@ -289,7 +289,7 @@
     },
     {
       "persona": "Tomás Eduardo Aguilera Muñoz",
-      "sticker": "TG-HGZ3-9CNY",
+      "sticker": "TG-ED64-7TH0",
       "posicion": 1,
       "dedo": "Pulgar derecho",
       "archivo": "datasets/fvc2002/DB4_B/107_1.tif",
@@ -297,7 +297,7 @@
     },
     {
       "persona": "Tomás Eduardo Aguilera Muñoz",
-      "sticker": "TG-HGZ3-9CNY",
+      "sticker": "TG-ED64-7TH0",
       "posicion": 2,
       "dedo": "Índice derecho",
       "archivo": "datasets/fvc2002/DB4_B/108_1.tif",
@@ -305,7 +305,7 @@
     },
     {
       "persona": "Tomás Eduardo Aguilera Muñoz",
-      "sticker": "TG-HGZ3-9CNY",
+      "sticker": "TG-ED64-7TH0",
       "posicion": 3,
       "dedo": "Medio derecho",
       "archivo": "datasets/fvc2002/DB4_B/109_1.tif",
@@ -313,7 +313,7 @@
     },
     {
       "persona": "Tomás Eduardo Aguilera Muñoz",
-      "sticker": "TG-HGZ3-9CNY",
+      "sticker": "TG-ED64-7TH0",
       "posicion": 4,
       "dedo": "Anular derecho",
       "archivo": "datasets/fvc2002/DB4_B/110_1.tif",
@@ -321,7 +321,7 @@
     },
     {
       "persona": "Tomás Eduardo Aguilera Muñoz",
-      "sticker": "TG-HGZ3-9CNY",
+      "sticker": "TG-ED64-7TH0",
       "posicion": 5,
       "dedo": "Meñique derecho",
       "archivo": null,
@@ -329,7 +329,7 @@
     },
     {
       "persona": "Isidora Navarro Pizarro",
-      "sticker": "TG-NNAC-FP6T",
+      "sticker": "TG-Q48G-3B2V",
       "posicion": 1,
       "dedo": "Pulgar derecho",
       "archivo": "datasets/fvc2002/DB1_B/105_1.tif",
@@ -338,7 +338,7 @@
     },
     {
       "persona": "Isidora Navarro Pizarro",
-      "sticker": "TG-NNAC-FP6T",
+      "sticker": "TG-Q48G-3B2V",
       "posicion": 2,
       "dedo": "Índice derecho",
       "archivo": "datasets/fvc2002/DB1_B/109_1.tif",
@@ -347,12 +347,12 @@
     },
     {
       "persona": "Rodrigo Alonso Saavedra Molina",
-      "sticker": "TG-NW4N-JN1X",
+      "sticker": "TG-M321-6KWC",
       "posicion": 2,
       "dedo": "Índice derecho",
       "archivo": "datasets/fvc2002/DB2_B/101_2.tif",
       "dpi": 569,
-      "nota": "Duplicado sembrado: misma huella que Matías Ignacio Herrera Lagos (Medio derecho, TG-JTHR-NEF7)"
+      "nota": "Duplicado sembrado: misma huella que Matías Ignacio Herrera Lagos (Medio derecho, TG-6QTV-YHZR)"
     }
   ],
   "sinAsignar": {
@@ -370,7 +370,7 @@
       "origen": "datasets/fvc2002/DB1_B/106_5.tif",
       "dueño": {
         "persona": "Valeria Andrea Contreras Ibáñez",
-        "sticker": "TG-E7Q8-4CYY",
+        "sticker": "TG-VW5N-WBSY",
         "posicion": 5,
         "dedo": "Meñique derecho",
         "archivo": "datasets/fvc2002/DB1_B/106_1.tif",
@@ -389,7 +389,7 @@
       "origen": "datasets/fvc2002/DB1_B/108_3.tif",
       "dueño": {
         "persona": "Matías Ignacio Herrera Lagos",
-        "sticker": "TG-JTHR-NEF7",
+        "sticker": "TG-6QTV-YHZR",
         "posicion": 1,
         "dedo": "Pulgar derecho",
         "archivo": "datasets/fvc2002/DB1_B/108_1.tif",
@@ -397,8 +397,8 @@
       }
     },
     "perfil_sticker_en_lab.xml": {
-      "sticker": "TG-NNAC-FP6T",
-      "specimenId": "TG-NNAC-FP6T"
+      "sticker": "TG-Q48G-3B2V",
+      "specimenId": "TG-Q48G-3B2V"
     },
     "perfil_otra_muestra.xml": {
       "specimenId": "TG-9Q4M-2XKD",
@@ -406,20 +406,20 @@
     },
     "perfil_persona_registrada.xml": {
       "coincideCon": "Camila Andrea Vargas Peña",
-      "sticker": "TG-F07A-9A9N"
+      "sticker": "TG-ASHE-Y8BY"
     }
   },
   "stickers": {
     "enLaboratorioGuion": {
-      "codigo": "TG-NNAC-FP6T",
+      "codigo": "TG-Q48G-3B2V",
       "estado": "Enviado al laboratorio externo, esperando el resultado"
     },
     "duplicado": {
-      "codigo": "TG-NW4N-JN1X",
+      "codigo": "TG-M321-6KWC",
       "estado": "Enviado al laboratorio externo, esperando el resultado"
     },
     "alterable": {
-      "codigo": "TG-JTHR-NEF7",
+      "codigo": "TG-6QTV-YHZR",
       "persona": "Matías Ignacio Herrera Lagos"
     }
   }

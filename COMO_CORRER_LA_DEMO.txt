@@ -163,6 +163,11 @@ Para detener todo:  Ctrl + C  en la terminal de "npm run dev".
                          cargar los datos de demostración).
   npm run demo:alterar   Altera un dato directo en la base para mostrar
                          que "Verificar integridad" lo detecta.
+  npm run demo:resultado -- TG-XXXX-XXXX
+                         Genera el archivo de resultado del laboratorio
+                         (perfil ficticio) para ese sticker, en
+                         examples/demo/resultados/. Súbelo en la pestaña
+                         "Laboratorio y perfil" del sticker.
   npm test               Pruebas automáticas.
 
 Para recorrer todo el flujo paso a paso, con los archivos de prueba de
