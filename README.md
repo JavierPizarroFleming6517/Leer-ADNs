@@ -150,4 +150,6 @@ JWT HS256 con emisor, audiencia y expiración; rol y estado del usuario leídos 
 - Estadística forense (probabilidad de coincidencia, parentesco) e integración con CODIS.
 - Gestión de llaves en un HSM/KMS, rotación de llaves y despliegue productivo (HTTPS, respaldo, alta disponibilidad).
 
+Para probar todo a mano, paso a paso y con los archivos de ejemplo, sigue [`docs/GUIA_PRUEBA.md`](docs/GUIA_PRUEBA.md).
+
 Las decisiones tomadas durante la construcción y las limitaciones conocidas están en [`docs/DECISIONES.md`](docs/DECISIONES.md).
