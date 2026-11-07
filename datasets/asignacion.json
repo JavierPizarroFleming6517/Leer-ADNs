@@ -1,0 +1,422 @@
+{
+  "descripcion": "Reparto de las huellas de FVC2002 (sets B, DB1–DB4) entre las personas de la demo. Lo genera la siembra; no editar a mano.",
+  "dpi": {
+    "DB1_B": 500,
+    "DB2_B": 569,
+    "DB3_B": 500,
+    "DB4_B": 500
+  },
+  "personas": [
+    {
+      "persona": "Valeria Andrea Contreras Ibáñez",
+      "sticker": "TG-1VQ3-8ZNE",
+      "posicion": 1,
+      "dedo": "Pulgar derecho",
+      "archivo": "datasets/fvc2002/DB1_B/101_1.tif",
+      "dpi": 500
+    },
+    {
+      "persona": "Valeria Andrea Contreras Ibáñez",
+      "sticker": "TG-1VQ3-8ZNE",
+      "posicion": 2,
+      "dedo": "Índice derecho",
+      "archivo": "datasets/fvc2002/DB1_B/102_1.tif",
+      "dpi": 500
+    },
+    {
+      "persona": "Valeria Andrea Contreras Ibáñez",
+      "sticker": "TG-1VQ3-8ZNE",
+      "posicion": 3,
+      "dedo": "Medio derecho",
+      "archivo": "datasets/fvc2002/DB1_B/103_1.tif",
+      "dpi": 500
+    },
+    {
+      "persona": "Valeria Andrea Contreras Ibáñez",
+      "sticker": "TG-1VQ3-8ZNE",
+      "posicion": 4,
+      "dedo": "Anular derecho",
+      "archivo": "datasets/fvc2002/DB1_B/104_1.tif",
+      "dpi": 500
+    },
+    {
+      "persona": "Valeria Andrea Contreras Ibáñez",
+      "sticker": "TG-1VQ3-8ZNE",
+      "posicion": 5,
+      "dedo": "Meñique derecho",
+      "archivo": "datasets/fvc2002/DB1_B/106_1.tif",
+      "dpi": 500
+    },
+    {
+      "persona": "Matías Ignacio Herrera Lagos",
+      "sticker": "TG-2K7X-9MFB",
+      "posicion": 1,
+      "dedo": "Pulgar derecho",
+      "archivo": "datasets/fvc2002/DB1_B/108_1.tif",
+      "dpi": 500
+    },
+    {
+      "persona": "Matías Ignacio Herrera Lagos",
+      "sticker": "TG-2K7X-9MFB",
+      "posicion": 2,
+      "dedo": "Índice derecho",
+      "archivo": "datasets/fvc2002/DB1_B/110_1.tif",
+      "dpi": 500
+    },
+    {
+      "persona": "Matías Ignacio Herrera Lagos",
+      "sticker": "TG-2K7X-9MFB",
+      "posicion": 3,
+      "dedo": "Medio derecho",
+      "archivo": "datasets/fvc2002/DB2_B/101_1.tif",
+      "dpi": 569
+    },
+    {
+      "persona": "Matías Ignacio Herrera Lagos",
+      "sticker": "TG-2K7X-9MFB",
+      "posicion": 4,
+      "dedo": "Anular derecho",
+      "archivo": "datasets/fvc2002/DB2_B/102_1.tif",
+      "dpi": 569
+    },
+    {
+      "persona": "Matías Ignacio Herrera Lagos",
+      "sticker": "TG-2K7X-9MFB",
+      "posicion": 5,
+      "dedo": "Meñique derecho",
+      "archivo": "datasets/fvc2002/DB2_B/103_1.tif",
+      "dpi": 569
+    },
+    {
+      "persona": "Lucía Belén Fernández Ortiz",
+      "sticker": "TG-3FTR-6WAP",
+      "posicion": 1,
+      "dedo": "Pulgar derecho",
+      "archivo": "datasets/fvc2002/DB2_B/104_1.tif",
+      "dpi": 569
+    },
+    {
+      "persona": "Lucía Belén Fernández Ortiz",
+      "sticker": "TG-3FTR-6WAP",
+      "posicion": 2,
+      "dedo": "Índice derecho",
+      "archivo": "datasets/fvc2002/DB2_B/105_1.tif",
+      "dpi": 569
+    },
+    {
+      "persona": "Lucía Belén Fernández Ortiz",
+      "sticker": "TG-3FTR-6WAP",
+      "posicion": 3,
+      "dedo": "Medio derecho",
+      "archivo": "datasets/fvc2002/DB2_B/106_1.tif",
+      "dpi": 569
+    },
+    {
+      "persona": "Lucía Belén Fernández Ortiz",
+      "sticker": "TG-3FTR-6WAP",
+      "posicion": 4,
+      "dedo": "Anular derecho",
+      "archivo": "datasets/fvc2002/DB2_B/107_1.tif",
+      "dpi": 569
+    },
+    {
+      "persona": "Lucía Belén Fernández Ortiz",
+      "sticker": "TG-3FTR-6WAP",
+      "posicion": 5,
+      "dedo": "Meñique derecho",
+      "archivo": "datasets/fvc2002/DB2_B/108_1.tif",
+      "dpi": 569
+    },
+    {
+      "persona": "Sebastián Rojas Alarcón",
+      "sticker": "TG-4NJE-8CQS",
+      "posicion": 1,
+      "dedo": "Pulgar derecho",
+      "archivo": "datasets/fvc2002/DB2_B/109_1.tif",
+      "dpi": 569
+    },
+    {
+      "persona": "Sebastián Rojas Alarcón",
+      "sticker": "TG-4NJE-8CQS",
+      "posicion": 2,
+      "dedo": "Índice derecho",
+      "archivo": "datasets/fvc2002/DB2_B/110_1.tif",
+      "dpi": 569
+    },
+    {
+      "persona": "Sebastián Rojas Alarcón",
+      "sticker": "TG-4NJE-8CQS",
+      "posicion": 3,
+      "dedo": "Medio derecho",
+      "archivo": "datasets/fvc2002/DB3_B/101_1.tif",
+      "dpi": 500
+    },
+    {
+      "persona": "Sebastián Rojas Alarcón",
+      "sticker": "TG-4NJE-8CQS",
+      "posicion": 4,
+      "dedo": "Anular derecho",
+      "archivo": "datasets/fvc2002/DB3_B/102_1.tif",
+      "dpi": 500
+    },
+    {
+      "persona": "Sebastián Rojas Alarcón",
+      "sticker": "TG-4NJE-8CQS",
+      "posicion": 5,
+      "dedo": "Meñique derecho",
+      "archivo": "datasets/fvc2002/DB3_B/103_1.tif",
+      "dpi": 500
+    },
+    {
+      "persona": "Camila Andrea Vargas Peña",
+      "sticker": "TG-5C8R-7NHQ",
+      "posicion": 1,
+      "dedo": "Pulgar derecho",
+      "archivo": "datasets/fvc2002/DB3_B/104_1.tif",
+      "dpi": 500
+    },
+    {
+      "persona": "Camila Andrea Vargas Peña",
+      "sticker": "TG-5C8R-7NHQ",
+      "posicion": 2,
+      "dedo": "Índice derecho",
+      "archivo": "datasets/fvc2002/DB3_B/105_1.tif",
+      "dpi": 500
+    },
+    {
+      "persona": "Camila Andrea Vargas Peña",
+      "sticker": "TG-5C8R-7NHQ",
+      "posicion": 3,
+      "dedo": "Medio derecho",
+      "archivo": "datasets/fvc2002/DB3_B/106_1.tif",
+      "dpi": 500
+    },
+    {
+      "persona": "Camila Andrea Vargas Peña",
+      "sticker": "TG-5C8R-7NHQ",
+      "posicion": 5,
+      "dedo": "Meñique derecho",
+      "archivo": "datasets/fvc2002/DB3_B/107_1.tif",
+      "dpi": 500
+    },
+    {
+      "persona": "Camila Andrea Vargas Peña",
+      "sticker": "TG-5C8R-7NHQ",
+      "posicion": 4,
+      "dedo": "Anular derecho",
+      "archivo": null,
+      "noObtenible": "Cicatriz extensa en el pulpejo: crestas no legibles"
+    },
+    {
+      "persona": "Joaquín Andrés Medina Salas",
+      "sticker": "TG-6BXM-2TZG",
+      "posicion": 1,
+      "dedo": "Pulgar derecho",
+      "archivo": "datasets/fvc2002/DB3_B/108_1.tif",
+      "dpi": 500
+    },
+    {
+      "persona": "Joaquín Andrés Medina Salas",
+      "sticker": "TG-6BXM-2TZG",
+      "posicion": 3,
+      "dedo": "Medio derecho",
+      "archivo": "datasets/fvc2002/DB3_B/109_1.tif",
+      "dpi": 500
+    },
+    {
+      "persona": "Joaquín Andrés Medina Salas",
+      "sticker": "TG-6BXM-2TZG",
+      "posicion": 4,
+      "dedo": "Anular derecho",
+      "archivo": "datasets/fvc2002/DB3_B/110_1.tif",
+      "dpi": 500
+    },
+    {
+      "persona": "Joaquín Andrés Medina Salas",
+      "sticker": "TG-6BXM-2TZG",
+      "posicion": 5,
+      "dedo": "Meñique derecho",
+      "archivo": "datasets/fvc2002/DB4_B/101_1.tif",
+      "dpi": 500
+    },
+    {
+      "persona": "Joaquín Andrés Medina Salas",
+      "sticker": "TG-6BXM-2TZG",
+      "posicion": 2,
+      "dedo": "Índice derecho",
+      "archivo": null,
+      "noObtenible": "Amputación traumática de falange distal"
+    },
+    {
+      "persona": "Fernanda Castillo Ruiz",
+      "sticker": "TG-7DPW-4KJR",
+      "posicion": 1,
+      "dedo": "Pulgar derecho",
+      "archivo": "datasets/fvc2002/DB4_B/102_1.tif",
+      "dpi": 500
+    },
+    {
+      "persona": "Fernanda Castillo Ruiz",
+      "sticker": "TG-7DPW-4KJR",
+      "posicion": 2,
+      "dedo": "Índice derecho",
+      "archivo": "datasets/fvc2002/DB4_B/104_1.tif",
+      "dpi": 500
+    },
+    {
+      "persona": "Fernanda Castillo Ruiz",
+      "sticker": "TG-7DPW-4KJR",
+      "posicion": 4,
+      "dedo": "Anular derecho",
+      "archivo": "datasets/fvc2002/DB4_B/105_1.tif",
+      "dpi": 500
+    },
+    {
+      "persona": "Fernanda Castillo Ruiz",
+      "sticker": "TG-7DPW-4KJR",
+      "posicion": 5,
+      "dedo": "Meñique derecho",
+      "archivo": "datasets/fvc2002/DB4_B/106_1.tif",
+      "dpi": 500
+    },
+    {
+      "persona": "Fernanda Castillo Ruiz",
+      "sticker": "TG-7DPW-4KJR",
+      "posicion": 3,
+      "dedo": "Medio derecho",
+      "archivo": null,
+      "noObtenible": "Vendaje por herida reciente; no se pudo entintar"
+    },
+    {
+      "persona": "Tomás Eduardo Aguilera Muñoz",
+      "sticker": "TG-8RGZ-3VMC",
+      "posicion": 1,
+      "dedo": "Pulgar derecho",
+      "archivo": "datasets/fvc2002/DB4_B/107_1.tif",
+      "dpi": 500
+    },
+    {
+      "persona": "Tomás Eduardo Aguilera Muñoz",
+      "sticker": "TG-8RGZ-3VMC",
+      "posicion": 2,
+      "dedo": "Índice derecho",
+      "archivo": "datasets/fvc2002/DB4_B/108_1.tif",
+      "dpi": 500
+    },
+    {
+      "persona": "Tomás Eduardo Aguilera Muñoz",
+      "sticker": "TG-8RGZ-3VMC",
+      "posicion": 3,
+      "dedo": "Medio derecho",
+      "archivo": "datasets/fvc2002/DB4_B/109_1.tif",
+      "dpi": 500
+    },
+    {
+      "persona": "Tomás Eduardo Aguilera Muñoz",
+      "sticker": "TG-8RGZ-3VMC",
+      "posicion": 4,
+      "dedo": "Anular derecho",
+      "archivo": "datasets/fvc2002/DB4_B/110_1.tif",
+      "dpi": 500
+    },
+    {
+      "persona": "Tomás Eduardo Aguilera Muñoz",
+      "sticker": "TG-8RGZ-3VMC",
+      "posicion": 5,
+      "dedo": "Meñique derecho",
+      "archivo": null,
+      "noObtenible": "Dermatitis de contacto: grafito insuficiente en la casilla"
+    },
+    {
+      "persona": "Isidora Navarro Pizarro",
+      "sticker": "TG-9AWH-5PXN",
+      "posicion": 1,
+      "dedo": "Pulgar derecho",
+      "archivo": "datasets/fvc2002/DB1_B/105_1.tif",
+      "dpi": 500,
+      "nota": "Enviado al laboratorio externo, esperando el resultado"
+    },
+    {
+      "persona": "Isidora Navarro Pizarro",
+      "sticker": "TG-9AWH-5PXN",
+      "posicion": 2,
+      "dedo": "Índice derecho",
+      "archivo": "datasets/fvc2002/DB1_B/109_1.tif",
+      "dpi": 500,
+      "nota": "Enviado al laboratorio externo, esperando el resultado"
+    },
+    {
+      "persona": "Rodrigo Alonso Saavedra Molina",
+      "sticker": "TG-0ZKT-7HEB",
+      "posicion": 2,
+      "dedo": "Índice derecho",
+      "archivo": "datasets/fvc2002/DB2_B/101_2.tif",
+      "dpi": 569,
+      "nota": "Duplicado sembrado: misma huella que Matías Ignacio Herrera Lagos (Medio derecho, TG-2K7X-9MFB)"
+    }
+  ],
+  "sinAsignar": {
+    "archivo": "datasets/fvc2002/DB4_B/103_*.tif",
+    "uso": "examples/demo/paso6_verificacion/2_huella_desconocida.png (impresión _2): ningún dedo registrado"
+  },
+  "reservados": {
+    "tomaEnVivo": {
+      "archivo": "datasets/fvc2002/DB1_B/107_1.tif",
+      "uso": "examples/demo/paso3_toma/huella_indice_derecho.png: dedo limpio para cargar en vivo"
+    }
+  },
+  "archivosDemo": {
+    "paso6_verificacion/1_huella_registrada.png": {
+      "origen": "datasets/fvc2002/DB1_B/106_5.tif",
+      "dueño": {
+        "persona": "Valeria Andrea Contreras Ibáñez",
+        "sticker": "TG-1VQ3-8ZNE",
+        "posicion": 5,
+        "dedo": "Meñique derecho",
+        "archivo": "datasets/fvc2002/DB1_B/106_1.tif",
+        "dpi": 500
+      }
+    },
+    "paso6_verificacion/2_huella_desconocida.png": {
+      "origen": "datasets/fvc2002/DB4_B/103_2.tif",
+      "dueño": null
+    },
+    "paso3_toma/huella_indice_derecho.png": {
+      "origen": "datasets/fvc2002/DB1_B/107_1.tif",
+      "dueño": null
+    },
+    "paso3_toma/huella_medio_derecho_repetida.png": {
+      "origen": "datasets/fvc2002/DB1_B/108_3.tif",
+      "dueño": {
+        "persona": "Matías Ignacio Herrera Lagos",
+        "sticker": "TG-2K7X-9MFB",
+        "posicion": 1,
+        "dedo": "Pulgar derecho",
+        "archivo": "datasets/fvc2002/DB1_B/108_1.tif",
+        "dpi": 500
+      }
+    },
+    "paso6_verificacion/3_perfil_registrado.xml": {
+      "coincideCon": "Camila Andrea Vargas Peña",
+      "sticker": "TG-5C8R-7NHQ"
+    }
+  },
+  "stickers": {
+    "enVivo": {
+      "codigo": "TG-7M4K-2QRT",
+      "estado": "Nuevo: para la toma completa en vivo"
+    },
+    "esperando": {
+      "codigo": "TG-9AWH-5PXN",
+      "estado": "Enviado al laboratorio externo, esperando el resultado"
+    },
+    "duplicado": {
+      "codigo": "TG-0ZKT-7HEB",
+      "estado": "Huella duplicada; enviado al laboratorio externo"
+    },
+    "alterable": {
+      "codigo": "TG-2K7X-9MFB",
+      "persona": "Matías Ignacio Herrera Lagos"
+    }
+  }
+}

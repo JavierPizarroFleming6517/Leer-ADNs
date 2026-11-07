@@ -1,0 +1,223 @@
+=====================================================================
+  TRAZAGEN · CÓMO CORRER LA DEMO EN TU MÁQUINA
+  (rama: trazagen-demo)
+=====================================================================
+
+Lo importante primero:
+
+  * NO hay que crear ni copiar el archivo server/.env a mano.
+    No está en git a propósito: guarda contraseñas y llaves secretas.
+    El comando "npm run setup" lo crea solo, con llaves nuevas para tu
+    máquina. Cada persona tiene el suyo. NUNCA lo subas a git.
+
+  * Si corres "npm run dev" sin haber corrido antes "npm run setup",
+    falla con "Falta la variable de entorno ...". Esa es la causa más
+    común de que "no corra".
+
+  * El orden es siempre:
+      1) requisitos  2) base de datos  3) npm run setup  4) npm run dev
+
+
+---------------------------------------------------------------------
+ 1. REQUISITOS (una sola vez)
+---------------------------------------------------------------------
+
+Necesitas:
+  - Node.js 20 o superior
+  - Java JDK 17 o superior   (Maven NO hace falta: viene incluido)
+  - PostgreSQL 14 o superior
+
+Revisa qué tienes:
+
+  node -v
+  java -version
+  psql --version
+
+Si falta algo, instálalo según tu sistema:
+
+  Fedora:
+    sudo dnf install -y nodejs java-21-openjdk-devel postgresql-server postgresql
+
+  Ubuntu / Debian:
+    sudo apt install -y nodejs npm openjdk-21-jdk postgresql
+    (si "node -v" da menos de 20, instala Node 20+ desde https://nodejs.org)
+
+  macOS (con Homebrew):
+    brew install node openjdk@21 postgresql@16
+    brew services start postgresql@16
+
+  Windows (PowerShell):
+    winget install OpenJS.NodeJS.LTS
+    winget install Microsoft.OpenJDK.21
+    winget install PostgreSQL.PostgreSQL.16
+    (cierra y vuelve a abrir la terminal después de instalar)
+
+
+---------------------------------------------------------------------
+ 2. BASE DE DATOS LOCAL (una sola vez)
+---------------------------------------------------------------------
+
+La demo usa por defecto esta base:
+
+  usuario: trazagen   clave: trazagen   base: trazagen   (localhost:5432)
+
+--- Fedora (solo la primera vez que usas PostgreSQL) ---
+
+  sudo postgresql-setup --initdb
+  sudo systemctl enable --now postgresql
+  sudo sed -i -E 's/^(host\s+all\s+all\s+(127\.0\.0\.1\/32|::1\/128)\s+)ident/\1scram-sha-256/' /var/lib/pgsql/data/pg_hba.conf
+  sudo systemctl restart postgresql
+
+--- Ubuntu / Debian ---
+
+  sudo systemctl enable --now postgresql
+
+--- Crear usuario y base (Linux) ---
+
+  sudo -u postgres psql -c "CREATE USER trazagen WITH PASSWORD 'trazagen' CREATEDB;"
+  sudo -u postgres psql -c "CREATE DATABASE trazagen OWNER trazagen;"
+
+--- Crear usuario y base (macOS) ---
+
+  psql postgres -c "CREATE USER trazagen WITH PASSWORD 'trazagen' CREATEDB;"
+  psql postgres -c "CREATE DATABASE trazagen OWNER trazagen;"
+
+--- Crear usuario y base (Windows) ---
+
+  Abre "SQL Shell (psql)" desde el menú Inicio, entra con el usuario
+  postgres (la clave que pusiste al instalar) y ejecuta:
+
+    CREATE USER trazagen WITH PASSWORD 'trazagen' CREATEDB;
+    CREATE DATABASE trazagen OWNER trazagen;
+
+Comprueba que conecta (debe responder con un 1):
+
+  psql postgresql://trazagen:trazagen@localhost:5432/trazagen -c "SELECT 1"
+
+
+---------------------------------------------------------------------
+ 3. BAJAR LA RAMA E INSTALAR
+---------------------------------------------------------------------
+
+Dentro de la carpeta del repositorio:
+
+  git fetch origin
+  git checkout trazagen-demo
+  git pull
+
+  npm run setup
+
+"npm run setup" hace todo esto:
+  - instala las dependencias (raíz, server y client/web)
+  - CREA server/.env con secretos y llaves Ed25519 nuevas
+  - compila el motor de huellas (afis, en Java)
+  - crea las tablas en la base y carga los datos de demostración
+
+La primera vez tarda unos minutos (descarga Maven y SourceAFIS).
+Al final muestra:
+
+  ✓ TrazaGen listo.
+    Contraseña demo:   Demo-xxxxxxxx
+
+Anota esa contraseña. Si se te pierde:
+
+  grep DEMO_PASSWORD server/.env          (Linux / macOS)
+  findstr DEMO_PASSWORD server\.env       (Windows)
+
+Los avisos "WARNING" de Java, "npm warn deprecated" y "Update available"
+de Prisma son normales. NO actualices Prisma.
+
+
+---------------------------------------------------------------------
+ 4. LEVANTAR LA DEMO
+---------------------------------------------------------------------
+
+  npm run dev
+
+Espera a ver estas dos líneas:
+
+  AFIS (SourceAFIS 3.18.1) escuchando en http://127.0.0.1:7070
+  TrazaGen API escuchando en http://localhost:3000/api
+
+Abre en el navegador:   http://localhost:5173
+
+Entra con el usuario de administración (la contraseña es
+DEMO_PASSWORD):
+
+  Camila Rojas          admin@trazagen.cl          Administración
+
+En la pantalla de login basta con hacer clic en el nombre y escribir
+la contraseña.
+
+Arriba a la derecha deben estar en verde: API, Base de datos y
+Motor biométrico.
+
+Para detener todo:  Ctrl + C  en la terminal de "npm run dev".
+
+
+---------------------------------------------------------------------
+ 5. COMANDOS ÚTILES
+---------------------------------------------------------------------
+
+  npm run demo:reset     Deja la demo como nueva (borra y vuelve a
+                         cargar los datos de demostración).
+  npm run demo:alterar   Altera un dato directo en la base para mostrar
+                         que "Verificar integridad" lo detecta.
+  npm test               Pruebas automáticas.
+
+Para recorrer todo el flujo paso a paso sigue:   docs/GUIA_PRUEBA.md
+
+Todos los archivos para subir están en examples/demo/, ordenados por
+paso (paso3_toma, paso4_laboratorio, paso6_verificacion), con un
+resumen en examples/demo/LEEME.txt. Son fijos: "demo:reset" no
+modifica ningún archivo del repositorio.
+
+El sticker para la toma completa en vivo es siempre TG-7M4K-2QRT.
+
+
+---------------------------------------------------------------------
+ 6. PROBLEMAS FRECUENTES
+---------------------------------------------------------------------
+
+"Falta la variable de entorno ..." al correr npm run dev
+  -> No corriste "npm run setup". Córrelo y vuelve a intentar.
+
+"P1001" / "Can't reach database server" / "ECONNREFUSED 5432"
+  -> PostgreSQL no está corriendo o la base no existe.
+     Linux:  sudo systemctl start postgresql
+     Revisa el paso 2 y la prueba con "SELECT 1".
+
+"password authentication failed" o "Ident authentication failed"
+  -> Fedora: falta el comando "sed" del paso 2 (pg_hba.conf).
+
+"DATABASE_URL no es una cadena de PostgreSQL válida"
+  -> Revisa la línea DATABASE_URL en server/.env. Debe ser UNA sola
+     línea, sin comillas y sin el nombre repetido:
+       DATABASE_URL=postgresql://trazagen:trazagen@localhost:5432/trazagen?schema=public
+     Y no tengas otra DATABASE_URL exportada en la terminal:
+       echo $DATABASE_URL     (si muestra algo:  unset DATABASE_URL)
+
+"La dirección ya se está usando" / puerto 7070 ocupado
+  -> Quedó un motor de huellas abierto de antes:
+       pkill -f afis.jar        (Linux / macOS)
+     y vuelve a correr "npm run dev".
+
+"Motor biométrico no disponible" en rojo en la app
+  -> El proceso "afis" no está corriendo. Mira la terminal de
+     "npm run dev" (líneas [afis]). Revisa que "java -version" sea 17+.
+
+Error al compilar afis / "release version 17 not supported"
+  -> Haz "git pull" (ya está corregido en la rama) y vuelve a correr
+     "npm run setup". Si sigue, revisa "java -version" y "javac -version".
+
+"JWT_SECRET debe tener al menos 32 caracteres"
+  -> Tenías un server/.env de una versión vieja. Haz "git pull" y corre
+     "npm run demo:reset": lo corrige solo.
+
+Usar Neon (nube) en vez de PostgreSQL local
+  -> Pon en server/.env la cadena DIRECTA de Neon (sin "-pooler" en el
+     host y sin "&channel_binding=require") y corre "npm run demo:reset".
+     OJO: el reset BORRA todo el esquema de esa base. Usa una base
+     nueva y exclusiva para la demo.
+
+=====================================================================

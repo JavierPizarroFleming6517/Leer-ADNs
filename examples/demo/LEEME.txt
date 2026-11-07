@@ -1,0 +1,21 @@
+ARCHIVOS PARA PROBAR LA DEMO DE TRAZAGEN
+========================================
+
+Antes de empezar:  npm run demo:reset   y   npm run dev
+
+Los archivos están ordenados por el paso de la guía (docs/GUIA_PRUEBA.md).
+Son siempre los mismos: la siembra no los modifica.
+
+PASO 3 · Toma de muestra (sticker TG-7M4K-2QRT)
+  paso3_toma/consentimiento_firmado.pdf          -> Persona y consentimiento
+  paso3_toma/huella_indice_derecho.png           -> Huellas, casilla 2. Sin duplicados.
+  paso3_toma/huella_medio_derecho_repetida.png   -> Huellas, casilla 3. Alerta de duplicado.
+
+PASO 4 · Resultado del laboratorio (mismo sticker TG-7M4K-2QRT)
+  paso4_laboratorio/1_resultado_de_otra_muestra.xml  -> SE RECHAZA (es de otro sticker)
+  paso4_laboratorio/2_resultado_TG-7M4K-2QRT.xml     -> SE ACEPTA (20/20 CODIS)
+
+PASO 6 · Verificación
+  paso6_verificacion/1_huella_registrada.png     -> Por huella: coincide con Valeria Contreras
+  paso6_verificacion/2_huella_desconocida.png    -> Por huella: sin coincidencias
+  paso6_verificacion/3_perfil_registrado.xml     -> Por perfil genético: coincide con Camila Vargas

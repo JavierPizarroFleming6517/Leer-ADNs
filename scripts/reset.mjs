@@ -1,0 +1,51 @@
+// npm run demo:reset: borra el esquema de la base, vuelve a migrar y a sembrar.
+// No usa "prisma migrate reset": el trigger de custodia impide borrar eventos, así que se recrea el esquema.
+import { writeFileSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { SERVER, conAfis, correr, leerEnv, npm, npx, paso } from './comun.mjs';
+import { asegurarEnv } from './env.mjs';
+
+// Completa server/.env si le falta algo (p. ej. un JWT_SECRET corto de una versión anterior).
+const env = asegurarEnv();
+if (env.generados.length) console.log(`server/.env actualizado: ${env.generados.join(', ')}`);
+
+const url = process.env.DATABASE_URL || leerEnv().DATABASE_URL;
+if (!url) {
+  console.error('✗ Falta DATABASE_URL en server/.env. Ejecuta primero npm run setup.');
+  process.exit(1);
+}
+let dbUrl;
+try {
+  dbUrl = new URL(url);
+  if (!/^postgres(ql)?:$/.test(dbUrl.protocol)) throw new Error();
+} catch {
+  const origen = process.env.DATABASE_URL ? 'la variable DATABASE_URL de tu terminal (tiene prioridad sobre server/.env; quítala con "unset DATABASE_URL")' : 'server/.env';
+  console.error(`✗ DATABASE_URL no es una cadena de PostgreSQL válida. Viene de ${origen}.\n  Valor: ${url.replace(/:[^:@/]*@/, ':****@')}\n  Debe verse así: DATABASE_URL=postgresql://usuario:clave@host:5432/base?schema=public`);
+  process.exit(1);
+}
+const esquema = dbUrl.searchParams.get('schema') || 'public';
+if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(esquema)) {
+  console.error('✗ Nombre de esquema no válido en DATABASE_URL.');
+  process.exit(1);
+}
+const host = dbUrl.hostname;
+paso(`Recreando el esquema "${esquema}" en ${host}`);
+const sql = join(tmpdir(), `trazagen-reset-${process.pid}.sql`);
+writeFileSync(sql, `DROP SCHEMA IF EXISTS "${esquema}" CASCADE;\nCREATE SCHEMA "${esquema}";\n`);
+try {
+  correr(npx, ['prisma', 'db', 'execute', '--file', sql, '--schema', 'prisma/schema.prisma'], SERVER);
+} finally {
+  rmSync(sql, { force: true });
+}
+paso('Aplicando migraciones');
+correr(npx, ['prisma', 'generate'], SERVER);
+correr(npx, ['prisma', 'migrate', 'deploy'], SERVER);
+paso('Sembrando datos de demostración');
+const detener = await conAfis();
+try {
+  correr(npm, ['run', 'seed'], SERVER);
+} finally {
+  detener();
+}
+console.log('\n\x1b[32m✓ Demo restablecida.\x1b[0m Si la app estaba abierta, vuelve a iniciar sesión.');

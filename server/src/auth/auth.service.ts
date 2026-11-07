@@ -1,40 +1,48 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { createHash, timingSafeEqual } from 'crypto';
-import { Role } from './roles.decorator';
+import * as bcrypt from 'bcryptjs';
+import { Ctx } from '../common/sesion';
+import { AuditoriaService } from '../auditoria/auditoria.service';
+import { PrismaService } from '../prisma/prisma.service';
+
+// Hash ficticio para igualar el tiempo de respuesta cuando el correo no existe.
+const HASH_FALSO = bcrypt.hashSync('trazagen-usuario-inexistente', 10);
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(
+    private readonly jwt: JwtService,
+    private readonly prisma: PrismaService,
+    private readonly auditoria: AuditoriaService,
+  ) {}
 
-  login(password: string): { accessToken: string; role: Role } {
-    const adminPassword = process.env.DEMO_ADMIN_PASSWORD?.trim() ?? '';
-    const readerPassword = process.env.DEMO_READER_PASSWORD?.trim() ?? '';
-
-    let role: Role | null = null;
-    if (this.matches(password, adminPassword)) {
-      role = 'ADMIN';
-    } else if (this.matches(password, readerPassword)) {
-      role = 'READER';
+  async login(email: string, password: string, ip: string | null) {
+    const u = await this.prisma.usuario.findUnique({ where: { email: email.toLowerCase().trim() } });
+    const ok = await bcrypt.compare(password, u?.passwordHash ?? HASH_FALSO);
+    if (!u || !ok || !u.activo) {
+      await this.auditoria.registrar(null, 'LOGIN_FALLIDO', { recurso: 'auth', detalle: { email: email.slice(0, 200) }, exito: false, ip });
+      throw new UnauthorizedException('Correo o contraseña incorrectos.');
     }
-
-    if (!role) {
-      throw new UnauthorizedException('La contraseña no es válida.');
-    }
-
+    const usuario = { id: u.id, nombre: u.nombre, email: u.email, rol: u.rol };
+    await this.auditoria.registrar({ usuario, ip }, 'LOGIN', { recurso: 'auth' });
     return {
-      accessToken: this.jwtService.sign({ role }),
-      role,
+      accessToken: this.jwt.sign({ sub: u.id, rol: u.rol }),
+      usuario: { ...usuario, institucion: u.institucion },
     };
   }
 
-  private matches(input: string, secret: string): boolean {
-    if (!secret) {
-      return false;
-    }
+  async usuariosDemo() {
+    const us = await this.prisma.usuario.findMany({
+      where: { activo: true, rol: 'ADMIN' },
+      orderBy: { createdAt: 'asc' },
+      select: { nombre: true, email: true, rol: true, institucion: true },
+      take: 8,
+    });
+    return us;
+  }
 
-    const left = createHash('sha256').update(input, 'utf8').digest();
-    const right = createHash('sha256').update(secret, 'utf8').digest();
-    return timingSafeEqual(left, right);
+  async yo(ctx: Ctx) {
+    const u = await this.prisma.usuario.findUniqueOrThrow({ where: { id: ctx.usuario.id } });
+    return { id: u.id, nombre: u.nombre, email: u.email, rol: u.rol, institucion: u.institucion };
   }
 }

@@ -1,11 +1,22 @@
 {
-  "name": "identificacion-genetica",
+  "name": "trazagen",
   "private": true,
+  "description": "TrazaGen · Plataforma de identificación dactilogenética (demo)",
   "scripts": {
-    "install:all": "npm install --prefix server && npm install --prefix client/admin && npm install --prefix client/reader",
-    "dev": "concurrently -n server,admin,reader -c blue,green,magenta \"npm run start:dev --prefix server\" \"npm run dev --prefix client/admin\" \"npm run dev --prefix client/reader\""
+    "setup": "node scripts/setup.mjs",
+    "dev": "concurrently -k -n afis,api,web -c magenta,blue,green \"node scripts/afis-dev.mjs\" \"npm run start:dev --prefix server\" \"npm run dev --prefix client/web\"",
+    "demo:reset": "node scripts/reset.mjs",
+    "demo:alterar": "npm run demo:alterar --prefix server",
+    "test": "npm test --prefix server",
+    "test:afis": "node scripts/evaluar-afis.mjs",
+    "test:e2e": "node e2e/guion.mjs",
+    "demo:resultado": "npm run -s demo:resultado --prefix server --"
   },
   "devDependencies": {
-    "concurrently": "^9.1.2"
+    "concurrently": "^9.1.2",
+    "playwright": "1.63.0"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

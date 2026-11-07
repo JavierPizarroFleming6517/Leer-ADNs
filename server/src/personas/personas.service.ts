@@ -1,222 +1,247 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
-import { createHash, randomBytes } from 'crypto';
+import { Persona, Prisma, Rol } from '@prisma/client';
+import { AuditoriaService } from '../auditoria/auditoria.service';
+import { bytes } from '../common/archivos';
+import { exigirVigente } from '../common/dominio';
+import { DEDOS, ocultaDocumento, puedeVerDocumentoCompleto } from '../common/dominio';
+import { Ctx } from '../common/sesion';
+import { CriptoService } from '../cripto/cripto.service';
+import { CustodiaService } from '../custodia/custodia.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { ImportarPersonaDto } from './dto/importar-persona.dto';
+import { StickersService } from '../stickers/stickers.service';
+import { sha256 } from '../cripto/cripto';
+import { ConsentimientoDto, EnvioDto, PersonaDto, TomaDto } from './dto/persona.dto';
 
-const MARKER_NAME = /^[A-Za-z0-9][A-Za-z0-9 ._-]{0,30}$/;
-const ALLELE = /^[A-Za-z0-9.]{1,10}$/;
+export function enmascarar(doc: string): string {
+  const visibles = doc.length > 5 ? 3 : 1;
+  return '•'.repeat(Math.max(3, doc.length - visibles)) + doc.slice(-visibles);
+}
 
 @Injectable()
 export class PersonasService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cripto: CriptoService,
+    private readonly custodia: CustodiaService,
+    private readonly auditoria: AuditoriaService,
+    private readonly stickers: StickersService,
+  ) {}
 
-  async importar(dto: ImportarPersonaDto) {
-    const marcadoresSTR = this.normalizarMarcadores(dto.perfilGenetico.marcadoresSTR);
-    const alertasClinicas = this.normalizarAlertas(dto.alertasClinicas);
-    const fechaNacimiento = this.parseFecha(dto.fechaNacimiento);
-    const codigoMuestra = dto.perfilGenetico.codigoMuestra?.trim() || null;
-
-    try {
-      const persona = await this.prisma.$transaction((tx) =>
-        tx.persona.create({
-          data: {
-            nombreCompleto: dto.nombreCompleto,
-            identificador: dto.identificador,
-            fechaNacimiento,
-            alertasClinicas: alertasClinicas ?? undefined,
-            perfilGenetico: {
-              create: {
-                codigoMuestra,
-                marcadoresSTR,
-              },
-            },
-            ...(dto.huellaDactilar
-              ? {
-                  huellaDactilar: {
-                    create: {
-                      referenciaSimulada: dto.huellaDactilar.referenciaSimulada?.trim() || null,
-                      estado: dto.huellaDactilar.estado,
-                    },
-                  },
-                }
-              : {}),
-          },
-        }),
-      );
-
-      return {
-        id: persona.id,
-        nombreCompleto: persona.nombreCompleto,
-        identificador: persona.identificador,
-      };
-    } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-        throw new ConflictException('Ya existe una persona con ese identificador.');
-      }
-      throw error;
-    }
+  // Proyección de la persona según el rol: el documento y la fecha completa solo los ve el admin.
+  vista(p: Persona, rol: Rol) {
+    const doc = this.cripto.descifrar(p.numeroDocumentoCifrado);
+    const nac = p.fechaNacimientoCifrada ? this.cripto.descifrar(p.fechaNacimientoCifrada) : null;
+    return {
+      id: p.id,
+      nombres: p.nombres,
+      apellidos: p.apellidos,
+      tipoDocumento: p.tipoDocumento,
+      documento: puedeVerDocumentoCompleto(rol) ? doc : ocultaDocumento(rol) ? null : enmascarar(doc),
+      documentoVisible: puedeVerDocumentoCompleto(rol) ? 'completo' : ocultaDocumento(rol) ? 'oculto' : 'enmascarado',
+      pais: p.pais,
+      nacionalidad: p.nacionalidad,
+      fechaNacimiento: puedeVerDocumentoCompleto(rol) ? nac : null,
+      anioNacimiento: nac && !ocultaDocumento(rol) ? nac.slice(0, 4) : null,
+      sexoDeclarado: p.sexoDeclarado,
+      institucion: p.institucion,
+      createdAt: p.createdAt,
+    };
   }
 
-  async listar() {
-    const personas = await this.prisma.persona.findMany({
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        nombreCompleto: true,
-        identificador: true,
-        qrTokenHash: true,
+  async crear(dto: PersonaDto, ctx: Ctx, tx: Prisma.TransactionClient = this.prisma) {
+    const indice = this.cripto.indiceDocumento(dto.tipoDocumento, dto.numeroDocumento, dto.pais);
+    const existe = await tx.persona.findUnique({ where: { documentoIndiceCiego: indice }, select: { id: true } });
+    if (existe) {
+      throw new ConflictException({
+        message: 'Ya existe una persona registrada con ese documento. Usa "Buscar existente".',
+        personaId: existe.id,
+      });
+    }
+    if (dto.fechaNacimiento && new Date(dto.fechaNacimiento) > new Date()) {
+      throw new BadRequestException('La fecha de nacimiento no puede ser futura.');
+    }
+    return tx.persona.create({
+      data: {
+        nombres: dto.nombres.trim(),
+        apellidos: dto.apellidos.trim(),
+        tipoDocumento: dto.tipoDocumento,
+        numeroDocumentoCifrado: this.cripto.cifrar(dto.numeroDocumento.trim().toUpperCase()),
+        documentoIndiceCiego: indice,
+        pais: dto.pais.trim(),
+        nacionalidad: dto.nacionalidad.trim(),
+        fechaNacimientoCifrada: dto.fechaNacimiento ? this.cripto.cifrar(dto.fechaNacimiento.slice(0, 10)) : null,
+        sexoDeclarado: dto.sexoDeclarado ?? null,
+        institucion: dto.institucion?.trim() || null,
+        ...(ctx.fecha ? { createdAt: ctx.fecha } : {}),
       },
     });
+  }
 
-    return personas.map(({ qrTokenHash, ...persona }) => ({
-      ...persona,
-      tieneQr: qrTokenHash !== null,
+  // Búsqueda exacta por documento usando el índice ciego (sin descifrar la tabla).
+  async buscarPorDocumento(tipo: string, numero: string, pais: string, ctx: Ctx) {
+    const indice = this.cripto.indiceDocumento(tipo, numero, pais);
+    const p = await this.prisma.persona.findUnique({
+      where: { documentoIndiceCiego: indice },
+      include: { stickers: { select: { codigo: true, estado: true } } },
+    });
+    await this.auditoria.registrar(ctx, 'BUSCAR_PERSONA_DOCUMENTO', { recurso: 'personas', detalle: { encontrada: Boolean(p) } });
+    if (!p) return { encontrada: false as const };
+    return { encontrada: true as const, persona: this.vista(p, ctx.usuario.rol), stickers: p.stickers };
+  }
+
+  async listar(q: string | undefined, ctx: Ctx) {
+    const where: Prisma.PersonaWhereInput = {};
+    const texto = q?.trim().slice(0, 80);
+    if (texto) {
+      // Si parece un documento, se busca por índice ciego en todos los tipos y países conocidos.
+      const indices: string[] = [];
+      if (/\d{3,}/.test(texto)) {
+        const combos = await this.prisma.persona.findMany({ select: { tipoDocumento: true, pais: true }, distinct: ['tipoDocumento', 'pais'] });
+        for (const c of combos) indices.push(this.cripto.indiceDocumento(c.tipoDocumento, texto, c.pais));
+      }
+      where.OR = [
+        { nombres: { contains: texto, mode: 'insensitive' } },
+        { apellidos: { contains: texto, mode: 'insensitive' } },
+        ...(indices.length ? [{ documentoIndiceCiego: { in: indices } }] : []),
+      ];
+    }
+    const personas = await this.prisma.persona.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: 300,
+      include: {
+        stickers: { select: { codigo: true, estado: true, vinculos: { where: { estado: 'VIGENTE' }, select: { id: true } } } },
+        consentimientos: { select: { id: true } },
+      },
+    });
+    await this.auditoria.registrar(ctx, 'CONSULTA_PERSONAS', { recurso: 'personas', detalle: { filtro: Boolean(texto), resultados: personas.length } });
+    return personas.map((p) => ({
+      ...this.vista(p, ctx.usuario.rol),
+      stickers: p.stickers.map((s) => ({ codigo: s.codigo, estado: s.estado, vinculado: s.vinculos.length > 0 })),
+      consentimientos: p.consentimientos.length,
     }));
   }
 
-  async generarQr(id: string) {
-    const persona = await this.prisma.persona.findUnique({
-      where: { id },
-      select: { id: true },
-    });
+  // ------------------------------------------------------------ Sticker ↔ persona
 
-    if (!persona) {
-      throw new NotFoundException('No existe la persona solicitada.');
+  // Un sticker se vincula una sola vez. Un segundo intento se bloquea y queda en auditoría.
+  async asociar(codigo: string, dto: { personaId?: string; nueva?: PersonaDto }, ctx: Ctx) {
+    const s = await this.stickers.porCodigo(codigo);
+    exigirVigente(s);
+    if (s.personaId) {
+      await this.auditoria.registrar(ctx, 'INTENTO_REVINCULAR_STICKER', { recurso: s.codigo, exito: false });
+      throw new ConflictException('Este sticker ya está vinculado a una persona. Un sticker se vincula una sola vez.');
     }
-
-    const base = (process.env.READER_BASE_URL?.trim() || 'http://localhost:5174').replace(/\/$/, '');
-
-    for (let attempt = 0; attempt < 2; attempt += 1) {
-      const token = randomBytes(32).toString('base64url');
-      const qrTokenHash = this.hashToken(token);
-
-      try {
-        await this.prisma.persona.update({
-          where: { id },
-          data: { qrTokenHash },
-        });
-        return { url: `${base}/q/${token}` };
-      } catch (error) {
-        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-          throw new NotFoundException('No existe la persona solicitada.');
-        }
-        const duplicated =
-          error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002' && attempt === 0;
-        if (!duplicated) {
-          throw error;
-        }
-      }
-    }
-
-    throw new ConflictException('No se pudo generar el código QR. Inténtalo de nuevo.');
-  }
-
-  async resolver(token: string) {
-    const persona = await this.prisma.persona.findUnique({
-      where: { qrTokenHash: this.hashToken(token.trim()) },
-      include: {
-        perfilGenetico: true,
-        huellaDactilar: true,
-      },
-    });
-
-    if (!persona?.perfilGenetico) {
-      throw new NotFoundException('El código QR no es válido o el expediente no existe.');
-    }
-
-    return {
-      nombreCompleto: persona.nombreCompleto,
-      identificador: persona.identificador,
-      fechaNacimiento: persona.fechaNacimiento ? persona.fechaNacimiento.toISOString().slice(0, 10) : null,
-      alertasClinicas: persona.alertasClinicas,
-      perfilGenetico: {
-        codigoMuestra: persona.perfilGenetico.codigoMuestra,
-        marcadoresSTR: persona.perfilGenetico.marcadoresSTR,
-      },
-      huellaDactilar: persona.huellaDactilar
-        ? {
-            referenciaSimulada: persona.huellaDactilar.referenciaSimulada,
-            estado: persona.huellaDactilar.estado,
-          }
-        : null,
-    };
-  }
-
-  private hashToken(token: string): string {
-    return createHash('sha256').update(token, 'utf8').digest('hex');
-  }
-
-  private normalizarMarcadores(value: Record<string, unknown>): Prisma.InputJsonObject {
-    const entries = Object.entries(value);
-    if (entries.length === 0) {
-      throw new BadRequestException('Debe incluir al menos un marcador STR.');
-    }
-    if (entries.length > 40) {
-      throw new BadRequestException('Se pueden registrar hasta 40 marcadores STR.');
-    }
-
-    const marcadores: Record<string, string[]> = {};
-
-    for (const [marker, alleles] of entries) {
-      if (marker === '__proto__' || marker === 'constructor' || marker === 'prototype' || !MARKER_NAME.test(marker)) {
-        throw new BadRequestException(`Marcador inválido: ${marker}`);
-      }
-      if (!Array.isArray(alleles) || alleles.length === 0 || alleles.length > 4) {
-        throw new BadRequestException(`El marcador ${marker} debe tener entre 1 y 4 alelos.`);
-      }
-
-      const normalizados = alleles.map((allele) => {
-        if (typeof allele !== 'string' || !ALLELE.test(allele.trim())) {
-          throw new BadRequestException(
-            `Los alelos de ${marker} deben ser texto, por ejemplo "15" o "9.3".`,
-          );
-        }
-        return allele.trim();
+    if (!dto.personaId && !dto.nueva) throw new BadRequestException('Indica una persona existente o los datos de una nueva.');
+    const persona = await this.prisma.$transaction(async (tx) => {
+      const p = dto.personaId
+        ? await tx.persona.findUnique({ where: { id: dto.personaId } })
+        : await this.crear(dto.nueva!, ctx, tx);
+      if (!p) throw new NotFoundException('La persona no existe.');
+      const r = await tx.sticker.updateMany({
+        where: { id: s.id, personaId: null },
+        data: { personaId: p.id, vinculadoEn: ctx.fecha ?? new Date() },
       });
-
-      marcadores[marker] = normalizados;
-    }
-
-    return marcadores as Prisma.InputJsonObject;
+      if (r.count !== 1) throw new ConflictException('Este sticker ya está vinculado a una persona.');
+      return p;
+    });
+    await this.auditoria.registrar(ctx, 'ASOCIAR_PERSONA', { recurso: s.codigo, detalle: { nueva: !dto.personaId } });
+    return this.vista(persona, ctx.usuario.rol);
   }
 
-  private normalizarAlertas(alertas?: ImportarPersonaDto['alertasClinicas']): Prisma.InputJsonObject | undefined {
-    if (!alertas) {
-      return undefined;
-    }
-
-    const alergias = (alertas.alergias ?? []).map((item) => item.trim()).filter(Boolean);
-    const observaciones = alertas.observaciones?.trim() ?? '';
-
-    if (alergias.some((item) => item.length > 80)) {
-      throw new BadRequestException('Cada alergia puede tener hasta 80 caracteres.');
-    }
-
-    if (alergias.length === 0 && !observaciones) {
-      return undefined;
-    }
-
-    return {
-      ...(alergias.length ? { alergias } : {}),
-      ...(observaciones ? { observaciones } : {}),
-    };
+  async consentimiento(codigo: string, dto: ConsentimientoDto, archivo: { nombre: string; datos: Buffer }, ctx: Ctx) {
+    const s = await this.stickers.porCodigo(codigo);
+    exigirVigente(s);
+    if (!s.personaId) throw new BadRequestException('Primero asocia una persona al sticker.');
+    const hash = sha256(archivo.datos);
+    const c = await this.prisma.consentimiento.create({
+      data: {
+        personaId: s.personaId,
+        versionTexto: dto.versionTexto,
+        fechaFirma: new Date(dto.fechaFirma),
+        entidadRevisora: dto.entidadRevisora,
+        archivoNombre: archivo.nombre,
+        archivoSha256: hash,
+        archivo: bytes(archivo.datos),
+        ...(ctx.fecha ? { createdAt: ctx.fecha } : {}),
+      },
+    });
+    await this.auditoria.registrar(ctx, 'SUBIR_CONSENTIMIENTO', { recurso: s.codigo, detalle: { sha256: hash } });
+    return { id: c.id, versionTexto: c.versionTexto, fechaFirma: c.fechaFirma, entidadRevisora: c.entidadRevisora, archivoNombre: c.archivoNombre, archivoSha256: hash };
   }
 
-  private parseFecha(value?: string | null): Date | null {
-    if (!value) {
-      return null;
+  async toma(codigo: string, dto: TomaDto, ctx: Ctx) {
+    const s = await this.prisma.sticker.findUnique({
+      where: { codigo },
+      include: { toma: true, lote: { include: { plantilla: true } }, huellas: { select: { posicion: true } } },
+    });
+    if (!s) throw new NotFoundException('No existe un sticker con ese código.');
+    exigirVigente(s);
+    if (!s.personaId) throw new BadRequestException('Primero asocia una persona al sticker.');
+    if (s.toma) throw new ConflictException('La toma de este sticker ya fue registrada.');
+    const posiciones = s.lote.plantilla.posiciones;
+    const vistos = new Set<number>();
+    for (const d of dto.dedosNoObtenibles) {
+      if (!posiciones.includes(d.posicion)) throw new BadRequestException(`El dedo ${d.posicion} no está en la plantilla de este sticker.`);
+      if (vistos.has(d.posicion)) throw new BadRequestException('Hay un dedo repetido en los no obtenibles.');
+      if (s.huellas.some((h) => h.posicion === d.posicion)) throw new BadRequestException(`${DEDOS[d.posicion]} ya tiene una huella cargada.`);
+      vistos.add(d.posicion);
     }
+    const fechaHora = new Date(dto.fechaHora);
+    if (fechaHora.getTime() > Date.now() + 5 * 60_000) throw new BadRequestException('La fecha de la toma no puede ser futura.');
+    await this.prisma.$transaction(async (tx) => {
+      await tx.tomaMuestra.create({
+        data: {
+          stickerId: s.id,
+          personaId: s.personaId!,
+          fechaHora,
+          lugar: dto.lugar.trim(),
+          operadorId: ctx.usuario.id,
+          observaciones: dto.observaciones?.trim() || null,
+          dedosNoObtenibles: dto.dedosNoObtenibles.map((d) => ({ posicion: d.posicion, dedo: DEDOS[d.posicion], motivo: d.motivo.trim() })),
+          ...(ctx.fecha ? { createdAt: ctx.fecha } : {}),
+        },
+      });
+      await this.custodia.agregar(tx, {
+        stickerId: s.id,
+        tipo: 'TOMA',
+        ctx,
+        detalle: {
+          lugar: dto.lugar.trim(),
+          fechaHora: fechaHora.toISOString(),
+          operador: ctx.usuario.nombre,
+          dedosNoObtenibles: dto.dedosNoObtenibles.map((d) => ({ posicion: d.posicion, motivo: d.motivo.trim() })),
+        },
+      });
+      await this.stickers.actualizarEstado(tx, s.id);
+    });
+    await this.auditoria.registrar(ctx, 'REGISTRAR_TOMA', { recurso: s.codigo });
+    return { ok: true };
+  }
 
-    const [year, month, day] = value.split('-').map(Number);
-    const date = new Date(Date.UTC(year, month - 1, day));
-    const valid =
-      date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+  async envio(codigo: string, dto: EnvioDto, ctx: Ctx) {
+    const s = await this.prisma.sticker.findUnique({
+      where: { codigo },
+      include: { toma: true, _count: { select: { huellas: true } }, eventos: { where: { tipo: 'ENVIO' }, select: { id: true }, take: 1 } },
+    });
+    if (!s) throw new NotFoundException('No existe un sticker con ese código.');
+    exigirVigente(s);
+    if (!s.toma || !s._count.huellas) throw new BadRequestException('Registra la toma y al menos una huella antes de enviar el sticker al laboratorio.');
+    if (s.eventos.length) throw new ConflictException('El envío de este sticker al laboratorio ya fue registrado.');
+    await this.custodia.agregarSolo({
+      stickerId: s.id,
+      tipo: 'ENVIO',
+      ctx,
+      detalle: { destino: dto.destino, transportista: dto.transportista ?? null, sello: dto.sello ?? null },
+    });
+    await this.auditoria.registrar(ctx, 'REGISTRAR_ENVIO', { recurso: s.codigo });
+    return { ok: true };
+  }
 
-    if (!valid) {
-      throw new BadRequestException('La fecha de nacimiento no es válida.');
-    }
-
-    return date;
+  async archivoConsentimiento(id: string, ctx: Ctx) {
+    const c = await this.prisma.consentimiento.findUnique({ where: { id } });
+    if (!c) throw new NotFoundException('El consentimiento no existe.');
+    await this.auditoria.registrar(ctx, 'DESCARGAR_CONSENTIMIENTO', { recurso: id });
+    return c;
   }
 }
